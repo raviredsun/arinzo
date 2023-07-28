@@ -1,0 +1,801 @@
+<?php
+if (!defined('WPINC')) {
+    die;
+}
+
+class TablesCalendar
+{
+    const ALL_ROOM_TYPES = '0';
+    const PERIOD_TYPE_MONTH = 'month';
+    const PERIOD_TYPE_QUARTER = 'quarter';
+    const PERIOD_TYPE_YEAR = 'year';
+    const PERIOD_TYPE_CUSTOM = 'custom';
+    const ATTS_FIELD_NAME = 'arf_pt_table_calendar';
+
+    /*
+     * Qadisha - Additional views
+     */
+    const PERIOD_TYPE_WEEK = 'week';
+    const PERIOD_TYPE_DAY = 'day';
+
+    /**
+     *
+     * @var string
+     */
+    private $periodType;
+
+    /**
+     *
+     * @var int
+     */
+    private $periodPage;
+
+    /**
+     *
+     * @var \DateTime
+     */
+    private $customPeriodFrom;
+
+    /**
+     *
+     * @var \DateTime
+     */
+    private $customPeriodTo;
+
+    /**
+     *
+     * @var \DatePeriod
+     */
+    private $period;
+
+    /**
+     *
+     * @var array
+     */
+    private $periodArr;
+
+    /**
+     *
+     * @var \DateTime
+     */
+    private $periodStartDate;
+
+    /**
+     *
+     * @var \DateTime
+     */
+    private $periodEndDate;
+
+    /**
+     *
+     * @var string
+     */
+    private $roomTypeId;
+
+    /**
+     *
+     * @var \WP_POST[]
+     */
+    private $roomPosts = array();
+
+    /**
+     *
+     * @var array
+     */
+    private $data = array();
+
+    /**
+     *
+     * @var string
+     */
+    private $searchRoomAvailabilityStatus;
+
+    /**
+     *
+     * @var \DateTime
+     */
+    private $searchDateFrom;
+
+    /**
+     *
+     * @var \DateTime
+     */
+    private $searchDateTo;
+
+    /**
+     *
+     * @var bool
+     */
+    private $isUseSearch = false;
+
+    /**
+     *
+     * @param array $atts
+     * @param int $atts ['room_type_id'] Which room type show. 0 for all room types.
+     * @param string $atts ['period_type'] Period to show. Possible values: month, quarter, year, custom.
+     * @param \DateTime $atts ['custom_period_from'] First date of custom period. Need period_type set to custom.
+     * @param \DateTime $atts ['custom_period_to'] Last date of custom period. Need period_type set to custom.
+     */
+
+    public function __construct($atts = array())
+    {
+        $defaultAtts = array(
+            'room_type_id' => self::ALL_ROOM_TYPES,
+            'period_type' => self::PERIOD_TYPE_DAY,
+            'period_page' => 0,
+            'custom_period_from' => new \DateTime(),
+        );
+        $atts = array_merge($defaultAtts, $atts);
+
+        $atts = $this->parseFiltersAtts($atts);
+
+
+        if (!empty($atts['custom_period_from'])) {
+            $this->customPeriodFrom = $atts['custom_period_from'];
+        } else {
+            $customPeriodFrom = \DateTime::createFromFormat(MPHB()->settings()->dateTime()->getDateFormat(), date('d/m/Y'));
+            $this->customPeriodFrom = $customPeriodFrom;
+        }
+
+        if (!empty($atts['custom_period_to'])) {
+            $this->customPeriodTo = $atts['custom_period_to'];
+        } else {
+            $customPeriodTo = \DateTime::createFromFormat(MPHB()->settings()->dateTime()->getDateFormat(), date('d/m/Y'));
+            $this->customPeriodTo = $customPeriodTo->modify('+1 day');
+        }
+
+        $this->periodType = $atts['period_type'];
+        $this->periodPage = $atts['period_page'];
+
+        $this->setupPeriod();
+        $this->setupRooms();
+        $this->setupData();
+
+    }
+
+    private function setupRooms()
+    {
+
+//        $roomAtts = array(
+//            'fields' => 'all',
+//            'posts_per_page' => -1
+//        );
+//
+//        if ($this->isUseSearch) {
+//            $searchAtts = array(
+//                'availability' => $this->searchRoomAvailabilityStatus,
+//                'from_date' => $this->searchDateFrom,
+//                'to_date' => $this->searchDateTo
+//            );
+//            $findedRooms = MPHB()->getRoomPersistence()->searchRooms($searchAtts);
+//
+//            if (empty($findedRooms)) {
+//                $this->roomPosts = array();
+//                return;
+//            }
+//
+//            $roomAtts['post__in'] = $findedRooms;
+//        }
+//
+//        if ($this->roomTypeId != self::ALL_ROOM_TYPES) {
+//            $roomAtts['room_type_id'] = $this->roomTypeId;
+//        } else {
+//            $roomAtts['room_type_id'] = MPHB()->getRoomTypePersistence()->getPosts();
+//        }
+//        $atts = array(
+//            'post_type' => 'arf_pt_table',
+//            'posts_per_page' => -1,
+//            'post_status' => 'publish',
+//            'orderby' => 'post_title',
+//            'order' => 'ASC'
+//        );
+        //$this->roomPosts = MPHB()->getRoomPersistence()->getPosts($atts);
+        $args = array(
+            'post_type' => 'arf_pt_table',
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            //'orderby' => 'post_title',
+            'meta_key' => 'sort_order', //name of meta field
+            'orderby' => array(
+                'meta_value' => "ASC",
+                'post_title' => "ASC",
+            ), 
+        );
+        //$this->roomPosts = get_posts($args);
+        $data = new WP_Query($args);
+        $this->roomPosts = isset($data->posts) ? $data->posts : array();
+    }
+
+    private function setupData()
+    {
+        $data = array();
+
+        $requestedRoomIds = wp_list_pluck($this->roomPosts, 'ID');
+
+        $atts = array(
+            'fields' => 'all',
+            'room_locked' => true,
+            'date_from' => $this->periodStartDate->format('Y-m-d'),
+            'date_to' => $this->periodEndDate->format('Y-m-d'),
+            'period_edge_overlap' => true,
+            'rooms' => $requestedRoomIds
+        );
+
+        $bookings = MPHB()->getBookingRepository()->findAll($atts);
+
+        foreach ($bookings as $booking) {
+
+            $reservedRooms = $booking->getReservedRooms();
+
+            if (empty($reservedRooms)) {
+                continue;
+            }
+
+            $customer = $booking->getCustomer();
+
+            $bookingDetails = array(
+                'customer' => $customer->getName(),
+                'email' => $customer->getEmail(),
+                'phone' => $customer->getPhone()
+            );
+
+            foreach ($reservedRooms as $reservedRoom) {
+                $roomId = $reservedRoom->getRoomId();
+
+                if (!in_array($roomId, $requestedRoomIds)) {
+                    continue;
+                }
+
+                if (!array_key_exists($roomId, $data)) {
+                    $data[$roomId] = array();
+                }
+
+                $bookingDetails['guest_name'] = $reservedRoom->getGuestName();
+                $bookingDetails['adults'] = $reservedRoom->getAdults();
+                $bookingDetails['children'] = $reservedRoom->getChildren();
+                $bookingDetails['ical'] = array();
+
+                if ($booking->isImported()) {
+                    $bookingDetails['ical'] = array(
+                        'uid' => $reservedRoom->getUid(),
+                        'summary' => $booking->getICalSummary(),
+                        'description' => $booking->getICalDescription(),
+                        'prodid' => $booking->getICalProdid()
+                    );
+                }
+
+                foreach ($booking->getDates() as $ymdDate => $date) {
+                    if (!isset($data[$roomId][$ymdDate])) {
+                        $data[$roomId][$ymdDate] = array();
+                    }
+                    $roomDateDetails = array(
+                        'is_locked' => true,
+                        'is_check_in' => $ymdDate === $booking->getCheckInDate()->format('Y-m-d'),
+                        'booking_status' => $booking->getStatus(),
+                        'booking_id' => $booking->getId(),
+                        'booking_edit_link' => get_edit_post_link($booking->getId()),
+                        'booking_details' => $bookingDetails
+                    );
+
+                    $data[$roomId][$ymdDate] = array_merge($data[$roomId][$ymdDate], $roomDateDetails);
+                }
+
+                $checkOutDateYmd = $booking->getCheckOutDate()->format('Y-m-d');
+                if (!isset($data[$roomId][$checkOutDateYmd])) {
+                    $data[$roomId][$checkOutDateYmd] = array();
+                }
+
+                $data[$roomId][$checkOutDateYmd] = array_merge($data[$roomId][$checkOutDateYmd], array(
+                        'is_check_out' => true,
+                        'check_out_booking_id' => $booking->getId(),
+                        'check_out_booking_status' => $booking->getStatus(),
+                        'check_out_booking_details' => $bookingDetails
+                    )
+                );
+            }
+        }
+
+        $this->data = $data;
+    }
+
+    private function setupPeriod()
+    {
+        $firstDay = $this->customPeriodFrom;
+        $lastDay = $this->customPeriodTo;
+
+        $this->period = MPHB\Utils\DateUtils::createDatePeriod($firstDay, $lastDay, true);
+        $this->periodArr = iterator_to_array($this->period);
+
+        $this->periodEndDate = end($this->periodArr);
+        $this->periodStartDate = reset($this->periodArr);
+    }
+
+    /**
+     *
+     * @param array $defaults
+     * @return array
+     */
+    private function parseFiltersAtts($defaults = array())
+    {
+        $atts = $defaults;
+
+        if (isset($_GET[self::ATTS_FIELD_NAME])) {
+            $filtersQuery = $_GET[self::ATTS_FIELD_NAME];
+
+            if (isset($filtersQuery['custom_period']) && isset($filtersQuery['custom_period']['date_from'])) {
+                $customPeriodFrom = \DateTime::createFromFormat(MPHB()->settings()->dateTime()->getDateFormat(), $filtersQuery['custom_period']['date_from']);
+                $customPeriodTo = \DateTime::createFromFormat(MPHB()->settings()->dateTime()->getDateFormat(), $filtersQuery['custom_period']['date_from']);
+
+                $atts['custom_period_from'] = $customPeriodFrom ? $customPeriodFrom : $atts['custom_period_from'];
+                $atts['custom_period_to'] = $customPeriodTo ? $customPeriodTo->modify('+1 day') : $atts['custom_period_to'];
+            }
+            // Period modificators
+            if (isset($filtersQuery['action_period_next'])) {
+                $atts['period_page']++;
+            }
+            if (isset($filtersQuery['action_period_prev'])) {
+                $atts['period_page']--;
+            }
+        }
+
+        return $atts;
+    }
+
+    public function render()
+    {
+        MPHB()->getAdminScriptManager()->enqueue();
+
+        $period = $this->periodType;
+        if ($period == self::PERIOD_TYPE_CUSTOM) {
+            $period .= '-period';
+        }
+        ?>
+        <div class="mphb-bookings-calendar-wrapper">
+            <?php $this->renderFilters(); ?>
+            <div
+                class="mphb-booking-calendar-tables-wrapper <?php echo esc_attr("mphb-booking-calendar-{$period}-tables"); ?>" style="overflow-x: auto;">
+                <?php $this->renderRoomsTable(); ?>
+                <div class="mphb-bookings-calendar-holder">
+                    <?php $this->renderDatesTable(); ?>
+                </div>
+            </div>
+            <div id="mphb-bookings-calendar-popup" class="mphb-popup mphb-hide">
+                <div class="mphb-popup-backdrop"></div>
+                <div class="mphb-popup-body">
+                    <div class="mphb-header">
+                        <h2 class="mphb-title mphb-inline"><?php _e('Booking #%s', 'arienzo_reservation_form'); ?></h2>
+                        <span class="mphb-preloader mphb-hide"></span>
+                        <span
+                            class="mphb-status mphb-hide"><?php _ex('Confirmed', 'Booking status', 'arienzo_reservation_form'); ?></span>
+                        <button class="mphb-close-popup-button dashicons dashicons-no-alt"></button>
+                    </div>
+                    <div class="mphb-content"></div>
+                    <div class="mphb-footer">
+                        <a href="#"
+                           class="button button-primary mphb-edit-button"><?php _e('Edit', 'arienzo_reservation_form'); ?></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    public function renderFilters()
+    {
+        ?>
+        <div class="mphb-bookings-calendar-filters-wrapper">
+            <?php
+            if ($this->isUseSearch) {
+                $this->renderSearchResultsLabel();
+            }
+            ?>
+            <form id="mphb-bookings-calendar-filters" method="get" class="wp-filter">
+                <?php
+                $parameters = array();
+
+                if (isset($_GET['page'])) {
+                    $parameters['page'] = sanitize_text_field($_GET['page']);
+                }
+                ?>
+                <div class="mphb-bookings-calendar-date alignleft 11111">
+                    <?php
+                    foreach ($parameters as $paramName => $paramValue) {
+                        printf('<input type="hidden" name="%s" value="%s" />', esc_attr($paramName), esc_attr($paramValue));
+                    }
+                    ?>
+                    <?php $this->renderPeriodFilter(); ?>
+                </div>
+                <div class="mphb-bookings-calendar-legend alignright">
+                    <?php _e( 'Legend:', 'motopress-hotel-booking' ) ?>
+                    <legend class="legend-item booked"><?php _e( 'Booked', 'motopress-hotel-booking' ); ?></legend>
+                    <legend class="legend-item pending"><?php _e( 'Pending', 'motopress-hotel-booking' ); ?></legend>
+                    <legend class="legend-item blocked"><?php _e( 'Blocked', 'motopress-hotel-booking' ); ?></legend>
+                </div>
+            </form>
+            <script>
+                jQuery(document).ready(function () {
+                    jQuery("#arf_cp_table_date").datepick({
+                        dateFormat: 'dd/mm/yyyy',
+                        onSelect : function (dateText, inst) {
+                            console.log(dateText, inst)
+                            jQuery('#mphb-bookings-calendar-filters').submit();
+                        }})
+                })
+            </script>
+        </div>
+        <?php
+    }
+
+    private function renderSearchResultsLabel()
+    {
+        $availabilityStatuses = $this->getSearchRoomAvailabilityStatuses();
+
+        $status = $availabilityStatuses[$this->searchRoomAvailabilityStatus];
+        $dateFrom = \MPHB\Utils\DateUtils::formatDateWPFront($this->searchDateFrom);
+        $dateTo = \MPHB\Utils\DateUtils::formatDateWPFront($this->searchDateTo);
+        ?>
+        <h3 class="mphb-booking-calendar-search-description">
+            <?php
+            printf(__('Search results for tables that have bookings with status "%s" from %s until %s', 'arienzo_reservation_form'), $status, $dateFrom, $dateTo);
+            ?>
+        </h3>
+        <?php
+    }
+
+    private function getSearchRoomAvailabilityStatuses()
+    {
+        return array(
+            '' => __('All', 'arienzo_reservation_form'),
+            'free' => __('Free', 'arienzo_reservation_form'),
+            'booked' => __('Booked', 'arienzo_reservation_form'),
+            'pending' => __('Pending', 'arienzo_reservation_form'),
+            'locked' => __('Locked (Booked or Pending)', 'arienzo_reservation_form')
+        );
+    }
+
+    private function renderPeriodFilter()
+    {
+        $prevNextClass = $this->periodType === 'custom' ? ' mphb-hide' : '';
+        $dateFrom = !is_null($this->customPeriodFrom) ? $this->customPeriodFrom->format(MPHB()->settings()->dateTime()->getDateFormat()) : '';
+        ?>
+
+        <?php //submit_button(__('&lt; Prev', 'arienzo_reservation_form'), 'button mphb-period-prev' . $prevNextClass, self::ATTS_FIELD_NAME . '[action_period_prev]', false); ?>
+        <input type="text" class="mphb-datepick mphb-custom-period-from mphb-date-input-width" id="arf_cp_table_date"
+               name="<?php echo self::ATTS_FIELD_NAME; ?>[custom_period][date_from]"
+               placeholder="<?php _e('From', 'arienzo_reservation_form'); ?>" value="<?php echo $dateFrom; ?>"/>
+
+        <?php
+        //submit_button(__('Next &gt;', 'arienzo_reservation_form'), 'button mphb-period-next' . $prevNextClass, self::ATTS_FIELD_NAME . '[action_period_next]', false);
+        $this->renderCustomPeriodFilter();
+    }
+
+    private function renderCustomPeriodFilter()
+    {
+        $customPeriodWrapperClass = $this->periodType !== 'custom' ? ' mphb-hide' : '';
+
+        $dateFrom = !is_null($this->customPeriodFrom) ? $this->customPeriodFrom->format(MPHB()->settings()->dateTime()->getDateFormat()) : '';
+        $dateTo = !is_null($this->customPeriodTo) ? $this->customPeriodTo->format(MPHB()->settings()->dateTime()->getDateFormat()) : '';
+        ?>
+        <div class="mphb-custom-period-wrapper<?php echo $customPeriodWrapperClass; ?>">
+
+            <input type="text" class="mphb-datepick mphb-custom-period-to mphb-date-input-width"
+                   name="<?php echo self::ATTS_FIELD_NAME; ?>[custom_period][date_to]"
+                   placeholder="<?php _e('Until', 'arienzo_reservation_form'); ?>" value="<?php echo $dateTo; ?>"/>
+        </div>
+        <?php
+    }
+
+    public function renderRoomsTable()
+    {
+        $lunch_time_list = array();
+        $lunch_time_list_table = get_posts([
+            'numberposts'       => -1,
+            'post_type'     => 'lunch_time',
+            'post_status'   => 'publish',
+            'suppress_filters' => 0,
+            'order'=> "asc",
+            'orderby'=> "post_title",
+            'meta_query' => array(
+                'relation' => 'OR', /* <-- here */
+                array(
+                    'key' => 'lunch_time_type',
+                    'value' => "lunch_time"
+                ),
+                array(
+                    'key' => 'lunch_time_type',
+                    'value'   => '',
+                    'compare' => '='
+                )
+            ),
+        ]);
+        foreach ($lunch_time_list_table as $key => $value) {
+            $lunch_time_list[$value->ID] = $value->post_title;
+        }
+        $lunch_time_list_sunbed = get_posts([
+            'numberposts'       => -1,
+            'post_type'     => 'lunch_time',
+            'post_status'   => 'publish',
+            'suppress_filters' => 0,
+            'order'=> "asc",
+            'orderby'=> "post_title",
+            'meta_query' => array(
+                array(
+                    'key' => 'lunch_time_type',
+                    'value' => "lunch_at_your_sunbed"
+                )
+            ),
+        ]);
+
+        foreach ($lunch_time_list_sunbed as $key => $value) {
+            $lunch_time_list[$value->ID] = $value->post_title." - Sunbed";
+        }
+
+
+        // $lunch_time_list = array(
+        //     '12:00',
+        //     '13:15',
+        //     '14:30',
+        //     '15:40',
+        //     '11:59'
+        // );
+        ?>
+        <table class="mphb-bookings-calendar-rooms_ mphb-bookings-date-table widefat">
+            <thead>
+            <tr>
+                <th style="width: 200px !important"><?php _e('Table', 'arienzo_reservation_form'); ?></th>
+                <?php $this->renderDatesTableHeadingsRow(); ?>
+            </tr>
+            </thead>
+            <tbody>
+            <tr><td style="width: 200px !important;"></td>
+                <?php foreach ($lunch_time_list as $key => $value) { ?>
+                    <th><?= $value ?></th>
+                <?php } ?></tr>
+            <?php if (!empty($this->roomPosts)) : ?>
+                <?php foreach ($this->roomPosts as $roomPost) : ?>
+                    <tr>
+                        <td title="<?php echo $roomPost->post_title; ?>" style="width: 200px !important;">
+                            <a href="<?php echo get_edit_post_link($roomPost->ID); ?>"><?php echo $roomPost->post_title; ?></a>
+                        </td>
+                        <?php
+                        foreach ($lunch_time_list as $keyy => $lunch_time) {
+                            $this->renderPseudoCell($roomPost->ID, $this->periodArr[0], $keyy);
+                        }
+                        ?>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else : ?>
+                <tr>
+                    <td></td>
+                    <td class="mphb-no-rooms-found"
+                        colspan="<?php echo \MPHB\Utils\DateUtils::calcNights($this->periodStartDate, $this->periodEndDate) * 2; ?>">
+                        <?php _e('No tables found.', 'arienzo_reservation_form'); ?>
+                    </td>
+                </tr>
+            <?php endif; ?>
+            </tbody>
+            <tfoot>
+            <tr>
+                <th><?php _e('Table', 'arienzo_reservation_form'); ?></th>
+                <?php $this->renderDatesTableHeadingsRow(); ?>
+            </tr>
+            </tfoot>
+        </table>
+        <?php
+    }
+
+    function renderDatesTable()
+    {
+        ?>
+        <?php
+    }
+
+    public function renderDatesTableHeadingsRow()
+    {
+        ?>
+            <?php
+            $date = $this->periodArr[0];
+            $isToday = $date->format('Y-m-d') === current_time('Y-m-d');
+            $thClass = $isToday ? 'mphb-date-today' : ''; ?>
+            <th colspan="5" class="<?php echo $thClass; ?>">
+                <?php echo $date->format('j'); ?>
+                <?php echo _x($date->format('M'), $date->format('F') . ' abbreviation'); ?>
+                <small class="mphb-subscript"><?php echo $date->format('Y'); ?></small>
+                <small class="mphb-subscript"><?php echo translate($date->format('D')); ?></small>
+
+            </th>
+        <?php
+    }
+
+    /**
+     *
+     * @param string $roomId
+     * @param \DateTime $date
+     */
+    private function renderPseudoCell($tableId, $date, $lunch_time)
+    {
+        $args = array(
+            'post_type' => 'mphb_booking',
+            'posts_per_page' => -1,
+            'post_status' => array('pending', 'confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge', 'pending-payment'),
+            'orderby' => 'post_title',
+            'order' => 'ASC',
+            'meta_query' => array(
+                'relation' => 'AND',
+                array(
+                    'key' => 'mphb_check_in_date',
+                    'value' => $date->format( 'Y-m-d' ),
+                ),
+                array(
+                    'key' => 'lunch_time',
+                    'compare' => 'IN',
+                    'value' => array($lunch_time,get_the_title($lunch_time)),
+                ),
+                array(
+                    'key' => 'arf_cp_table_id',
+                    'value' => $tableId,
+                    'compare' => 'LIKE'
+                ),
+            ),
+        );
+
+        $arf_pt_tables = get_posts($args);
+         /*echo "<pre>"; print_r($tableId); echo "</pre>";
+         echo "<pre>"; print_r($date->format( 'Y-m-d' )); echo "</pre>";
+         echo "<pre>"; print_r($lunch_time); echo "</pre>";
+         echo "<pre>"; print_r($arf_pt_tables); echo "</pre>";die; */
+        ?>
+        <td style="width: 200px !important;" class="">
+            <?php
+            if (!empty($arf_pt_tables)) {
+                foreach ($arf_pt_tables as $table) {
+                    $post_url = admin_url( 'post.php?post=' . $table->ID ) . '&action=edit';
+                    ?>
+                    <a href="<?php echo $post_url; ?>"  class="show_pop_" data-id="<?php echo $table->ID ?>">#<?php echo $table->ID ?> <?php _e('Booking', 'arienzo_reservation_form'); ?></a>
+                    <?php
+                    $booking = mphb_get_booking($table->ID, true);
+
+                    $reservedRooms = $booking->getReservedRooms();
+
+                    $guest = "";
+                    if (!empty($reservedRooms) && !$booking->isImported()) {
+                        $adultsTotal = 0;
+                        $childrenTotal = 0;
+                        foreach ($reservedRooms as $reservedRoom) {
+                            $adultsTotal += $reservedRoom->getAdults();
+                            $childrenTotal += $reservedRoom->getChildren();
+                        }
+
+                        $guest .= 'Adults: ';
+                        $guest .= $adultsTotal;
+                        if ($childrenTotal > 0) {
+                            $guest .= '<br/>';
+                            $guest .= 'Children: ';
+                            $guest .= $childrenTotal;
+                        }
+                    }
+                    $services_html = "";
+                    $reservedRooms = $booking->getReservedRooms();
+
+                    $customer = $booking->getCustomer();
+                    foreach ($reservedRooms as $reservedRoom) {
+                        $reservedServices = $reservedRoom->getReservedServices();
+                        $placeholder = ' &#8212;';
+                        if (!empty($reservedServices)) {
+                            
+                            foreach ($reservedServices as $kk => $reservedService) {
+                                
+
+                                $services_html .= '<a target="_blank" href="' . esc_url(get_edit_post_link($booking->getId())) . '">' . esc_html($reservedService->getTitle()) . '</a>';
+                                if ($reservedService->isPayPerAdult()) {
+                                    $services_html .= ' <em>' . sprintf(_n('x %d guest', 'x %d guests', $reservedService->getAdults(), 'motopress-hotel-booking'), $reservedService->getAdults()) . '</em>';
+                                }
+                                if ($reservedService->isFlexiblePay()) {
+                                    $services_html .= ' <em>' . sprintf(_n('x %d time', 'x %d times', $reservedService->getQuantity(), 'motopress-hotel-booking'), $reservedService->getQuantity()) . '</em>';
+                                }
+                                if($kk+1 != count($reservedServices)){
+                                    $services_html .= '  -  ';
+                                }
+                            }
+                        } else {
+                            $services_html .= "";
+                        }
+                    }
+                    ?>
+                    <br/>
+                    <small><?php echo $customer->getName() ?></small>
+                    <br/>
+                    <small><?php echo $guest ?></small>
+                    <br/>
+                    <small><?php echo $services_html ?></small>
+                <?php }
+            } else { ?>
+                -
+            <?php } ?>
+        </td>
+        <?php
+    }
+
+    /**
+     * @param \DateTime $date
+     * @param array $details
+     * @param string $part "first"|"second"
+     * @return string
+     */
+    private function generateCellTitle($date, $details, $part)
+    {
+        $availability = array();
+
+        if ($details['is_check_out']) {
+            $availability[] = sprintf(__('Check-out #%d', 'arienzo_reservation_form'), (int)$details['check_out_booking_id']);
+        }
+
+        if ($details['is_check_in']) {
+            $availability[] = sprintf(__('Check-in #%d', 'arienzo_reservation_form'), (int)$details['booking_id']);
+        } else if ($details['is_locked']) {
+            $availability[] = sprintf(__('Booking #%d', 'arienzo_reservation_form'), (int)$details['booking_id']);
+        } else if ($details['is_blocked']) {
+            if (!empty($details['comments'])) {
+                $availability[] = $details['comments'];
+            } else {
+                $availability[] = __('Blocked', 'arienzo_reservation_form');
+            }
+        } else {
+            $availability[] = _x('Free', 'Availability', 'arienzo_reservation_form');
+        }
+
+        $dateString = $date->format('D j, M Y:');
+        $availabilityString = implode(', ', $availability);
+        $summary = $dateString . ' ' . $availabilityString;
+
+        $bookingDetails = array();
+        if ($part == 'first' && $details['is_check_out']) {
+            $bookingDetails = $details['check_out_booking_details'];
+        } else if (isset($details['booking_details'])) {
+            $bookingDetails = $details['booking_details'];
+        }
+
+        $ical = array();
+        if (isset($bookingDetails['ical'])) {
+            $ical = $bookingDetails['ical'];
+            unset($bookingDetails['ical']);
+        }
+
+        $info = array_merge(array('summury' => $summary), $bookingDetails);
+        $info = array_map('trim', $info);
+        $info = array_filter($info);
+
+        if (isset($info['adults'])) {
+            $info['adults'] = sprintf(__('Adults: %s', 'arienzo_reservation_form'), $info['adults']);
+        }
+
+        if (isset($info['children'])) {
+            $info['children'] = sprintf(__('Children: %s', 'arienzo_reservation_form'), $info['children']);
+        }
+
+        $title = implode('&#10;', $info);
+
+        if (!empty($ical)) {
+            if (!empty($ical['uid'])) {
+                $title .= '&#10;' . sprintf(__('Booking imported with UID %s.', 'arienzo_reservation_form'), $ical['uid']);
+            } else {
+                $title .= '&#10;' . __('Imported booking.', 'arienzo_reservation_form');
+            }
+
+            if (!empty($ical['summary'])) {
+                $title .= '&#10;' . sprintf(__('Summary: %s.', 'arienzo_reservation_form'), $ical['summary']);
+            }
+
+            if (!empty($ical['description'])) {
+                $title .= '&#10;' . sprintf(__('Description: %s.', 'arienzo_reservation_form'), $ical['description']);
+            }
+
+            if (!empty($ical['prodid'])) {
+                $title .= '&#10;' . sprintf(__('Source: %s.', 'arienzo_reservation_form'), $ical['prodid']);
+            }
+        }
+
+        return $title;
+    }
+
+}
