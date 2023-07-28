@@ -45,17 +45,26 @@ class CheckoutStep extends Step {
 				add_action( 'mphb_cb_checkout_room_details', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderGuestsChooser' ), 20, 4 );
 				add_action( 'mphb_cb_checkout_room_details', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderRateChooser' ), 30, 5 );
 				add_action( 'mphb_cb_checkout_room_details', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderServiceChooser' ), 40, 4 );
+				add_action( 'mphb_cb_checkout_room_details', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderProductChooser' ), 40, 4 );
+				add_action( 'mphb_cb_checkout_room_details', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderPaymentType' ), 40, 4 );
 		add_action( 'mphb_cb_checkout_form', array( '\MPHB\Views\CreateBooking\CheckoutView', 'renderCoupon' ), 20 );
-		add_action( 'mphb_cb_checkout_form', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderPriceBreakdown' ), 30 );
+		//add_action( 'mphb_cb_checkout_form', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderPriceBreakdown' ), 30 );
 		add_action( 'mphb_cb_checkout_form', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderCheckoutText' ), 35 );
         add_action( 'mphb_cb_checkout_form', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderCustomerDetails' ), 40 );
-		add_action( 'mphb_cb_checkout_form', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderTotalPrice' ), 50 );
+		//add_action( 'mphb_cb_checkout_form', array( '\MPHB\Views\Shortcodes\CheckoutView', 'renderTotalPrice' ), 50 );
 		// Billing details - skipped - the booking does not require the payment
 		// Terms & conditions - skipped
 
+		add_filter('mphb_sc_checkout_preset_adults', array($this, 'presetAdults'), 10, 3);
+		add_filter('mphb_sc_checkout_preset_children', array($this, 'presetChildren'), 10, 3);
+
+
+		add_filter('mphb_sc_checkout_preset_service_adults', array($this, 'presetAdults'), 10, 3);
+		add_filter('mphb_sc_checkout_preset_service_child', array($this, 'presetChildren'), 10, 3);
+
+
 		// Create reserved rooms
 		$reservedRooms = array_map( array( '\MPHB\Entities\ReservedRoom', 'create' ), $this->rooms );
-
 		// Create booking
         MPHB()->reservationRequest()->setupParameter('pricing_strategy', 'base-price');
 
@@ -67,6 +76,29 @@ class CheckoutStep extends Step {
 
         MPHB()->reservationRequest()->resetDefaults(array('pricing_strategy'));
 	}
+
+
+    /**
+     * @param int $adults
+     * @param RoomType $roomType
+     * @param ReservedRoom $reservedRoom
+     * @return int
+     */
+    public function presetAdults($adults, $roomType, $reservedRoom)
+    {
+        return isset($_GET['mphb_adults']) ? $_GET['mphb_adults'] : -1;
+    }
+    /**
+     * @param int $children
+     * @param RoomType $roomType
+     * @param ReservedRoom $reservedRoom
+     * @return int
+     */
+    public function presetChildren($children, $roomType, $reservedRoom)
+    {
+        return isset($_GET['mphb_children']) ? $_GET['mphb_children'] : -1;
+    }
+
 
 	protected function renderValid(){
 		mphb_get_template_part( 'create-booking/checkout/checkout-form', array(
@@ -81,12 +113,128 @@ class CheckoutStep extends Step {
 	}
 
 	protected function parseFields(){
-		$this->checkInDate	 = $this->parseCheckInDate( INPUT_POST );
-		$this->checkOutDate	 = $this->parseCheckOutDate( INPUT_POST );
+		if(!empty($_GET['mphb_check_in_date']) && empty($_POST['mphb_check_in_date'])){
+			$_POST['mphb_check_in_date'] = $_GET['mphb_check_in_date'];
+		}
+		if(!empty($_GET['mphb_check_in_date']) && empty($_POST['mphb_check_in_date'])){
+			$_POST['mphb_check_in_date'] = $_GET['mphb_check_in_date'];
+		}
+		if(!empty($_GET['mphb_adults']) && empty($_POST['mphb_adults'])){
+			$_POST['mphb_adults'] = $_GET['mphb_adults'];
+		}
+		if(!empty($_GET['mphb_children']) && empty($_POST['mphb_children'])){
+			$_POST['mphb_children'] = $_GET['mphb_children'];
+		}
+
+		$this->checkInDate	 = $this->parseCheckInDate( INPUT_GET );
+		$this->checkOutDate	 = $this->parseCheckOutDate( INPUT_GET );
 
 		if ( $this->checkInDate && $this->checkOutDate ) {
-			$this->rooms = $this->parseRooms( INPUT_POST );
+			$rooms = MPHB()->getRoomRepository()->getAvailableRooms( $this->checkInDate, $this->checkOutDate );
+			$rateSearchAtts = array(
+				'check_in_date'	 => $this->checkInDate,
+				'check_out_date' => $this->checkOutDate
+			);
+
+			foreach ( array_keys( $rooms ) as $roomTypeId ) {
+				if ( !MPHB()->getRateRepository()->isExistsForRoomType( $roomTypeId, $rateSearchAtts ) ) {
+					unset( $rooms[$roomTypeId] );
+				}
+			}
+			foreach ( array_keys( $rooms ) as $roomTypeId ) {
+				$roomType = MPHB()->getRoomTypeRepository()->findById( $roomTypeId );
+
+				if ( is_null( $roomType ) || $roomType->getAdultsCapacity() < $this->adults || $roomType->getChildrenCapacity() < $this->children ) {
+					unset( $rooms[$roomTypeId] );
+				}
+			}
+			foreach ( array_keys( $rooms ) as $roomTypeId ) {
+				if ( !MPHB()->getRulesChecker()->verify( $this->checkInDate, $this->checkOutDate, $roomTypeId ) ) {
+					unset( $rooms[$roomTypeId] );
+					continue;
+				}
+
+				$unavailableRooms = MPHB()->getRulesChecker()->customRules()->getUnavailableRooms( $this->checkInDate, $this->checkOutDate, $roomTypeId );
+
+				if ( !empty( $unavailableRooms ) ) {
+					$availableRooms		 = array_diff( $rooms[$roomTypeId], $unavailableRooms );
+					$rooms[$roomTypeId]	 = $availableRooms;
+				}
+			}
+			foreach ($rooms as $key => $value) {
+				foreach ($value as $kk => $vv) {
+				
+					$room = $this->parseRoomsNew($key,array($vv));
+					if(!empty($room)){
+						$this->rooms = $room;
+        				break;
+					}
+				}
+				if(!empty($this->rooms)){
+        			break;
+				}
+			}
 		}
+	}
+
+	/**
+	 * @param int $input INPUT_POST (0) or INPUT_GET (1)
+	 *
+	 * @return array
+	 */
+	protected function parseRoomsNew( $roomTypeId , $roomIds ){
+		/** @var string|false|null */
+		$request	 = filter_input( $input, 'mphb_rooms', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
+		$rooms		 = array();
+		$wasErrors	 = count( $this->parseErrors );
+
+
+		
+		$roomTypeId		 = filter_var( $roomTypeId, FILTER_VALIDATE_INT );
+		$roomType		 = ( $roomTypeId > 0 ) ? MPHB()->getRoomTypeRepository()->findById( $roomTypeId ) : null;
+		$rateAtts		 = array( 'check_in_date' => $this->checkInDate, 'check_out_date' => $this->checkOutDate );
+		$allowedRates	 = ( $roomType ) ? MPHB()->getRateRepository()->findAllActiveByRoomType( $roomTypeId, $rateAtts ) : array();
+		$defaultRate	 = ( !empty( $allowedRates ) ) ? reset( $allowedRates ) : null;
+
+		if ( !$roomType ) {
+			return array();
+		}
+
+		if ( !is_array( $roomIds ) ) {
+			return array();
+		}
+
+		if ( empty( $allowedRates ) ) {
+			return array();
+		}
+
+		if ( !MPHB()->getRulesChecker()->verify( $this->checkInDate, $this->checkOutDate, $roomTypeId ) ) {
+			return array();
+		}
+
+		if ( !MPHB()->getRoomPersistence()->isRoomsFree( $this->checkInDate, $this->checkOutDate, $roomIds, array( 'room_type_id' => $roomTypeId ) ) ) {
+			return array();
+		}
+
+		foreach ( $roomIds as $roomId ) {
+			$roomId = absint( $roomId );
+
+			if ( $roomId == 0 ) {
+				$this->parseError( __( 'Selected accommodations are not valid.', 'motopress-hotel-booking' ) );
+				break;
+			}
+
+			$rooms[] = array(
+				'room_id'		 => $roomId,
+				'room_type_id'	 => $roomType->getOriginalId(),
+				'rate_id'		 => $defaultRate->getOriginalId(),
+				'allowed_rates'	 => $allowedRates,
+				'adults'		 => $roomType->getAdultsCapacity(),
+				'children'		 => $roomType->getChildrenCapacity()
+			);
+		}
+
+		return ( $rooms ) ? $rooms : array();
 	}
 
 	/**

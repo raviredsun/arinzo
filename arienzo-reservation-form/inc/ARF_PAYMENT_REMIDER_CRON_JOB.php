@@ -18,26 +18,26 @@ class ARF_PAYMENT_REMIDER_CRON_JOB {
 
     public function init() {
 
-        $date = date('Y-m-d',strtotime("+6 days"));
-        //$date = "2023-10-08";
+        $date = date('Y-m-d',strtotime("-6 days"));
+
         $atts = array(
             'posts_per_page'   => -1,
             'post_type'        => 'mphb_booking',
             'post_status'      => 'pending_late_charge',
-            /*"date_query" => array(
+            "date_query" => array(
                 array(
                     'column' => 'post_date',
                     'before' => $date,
                 ),
-            ),*/
-            'meta_query' => array(
+            ),
+            /*'meta_query' => array(
                 array(
                     'key'        => 'mphb_check_in_date',
                     'value' => $date,
                     'type' => 'DATE',
-                    'compare' => '='
+                    'compare' => '>='
                ),   
-            ),
+            ),*/
             /*'meta_key'         => 'mphb_check_in_date',
             'meta_value'       => $date,*/
             'fields'           => 'ids',
@@ -48,15 +48,8 @@ class ARF_PAYMENT_REMIDER_CRON_JOB {
 
         if($query->have_posts()) {
             $ids = $query->posts;
-            //print_r($ids);die;
             foreach ($ids as $id) {
-                $payments	 = MPHB()->getPaymentRepository()->findAll( array(
-					'booking_id'	 => $id,
-					'post_status'	 => \MPHB\PostTypes\PaymentCPT\Statuses::STATUS_COMPLETED
-					)
-				);
-                if(!$payments && get_the_date("D",$id) == date("D")){
-                    //echo $id;
+                if(get_the_date("D",$id) == date("D")){
                     $booking = MPHB()->getBookingRepository()->findById( $id, true );
                     $this->sendMail($booking);
                 }

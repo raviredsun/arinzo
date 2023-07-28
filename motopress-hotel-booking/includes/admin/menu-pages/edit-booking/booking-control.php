@@ -68,6 +68,9 @@ class BookingControl extends StepControl
         }
 
 
+        if (!empty($_POST['paytype'])) {
+             update_post_meta($booking->getId(), 'paytype', $_POST['paytype']);
+        }
         if (!empty($_POST['products'])) {
             $products_qty_old = get_post_meta($booking->getId(),"products_qty",1);
 

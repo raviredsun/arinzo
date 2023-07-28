@@ -814,7 +814,7 @@ class ARF_DOWNLOAD_PDF
         $attr = array(
             'posts_per_page' => -1,
             'post_type' => 'mphb_booking',
-            'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'),
+            'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'),
             'fields' => 'ids',
             'order' => 'asc',
             'orderby' => 'meta_value',
@@ -856,7 +856,7 @@ class ARF_DOWNLOAD_PDF
             SELECT ID
             FROM  ".$wpdb->prefix."posts
             LEFT JOIN $wpdb->postmeta ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id)
-                WHERE ".$where." AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge') AND post_type = 'mphb_booking'
+                WHERE ".$where." AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge') AND post_type = 'mphb_booking'
         ";
          echo "<pre>"; print_r($sql); echo "</pre>";die; 
         $booking_ids = $wpdb->get_results ($sql);
@@ -937,7 +937,7 @@ class ARF_DOWNLOAD_PDF
         /*if($this->status && ((is_array($this->status) && in_array("all", $this->status)) || ($this->status != "all"))){
         }*/
         $attr['post_status'] = array(
-            'confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'
+            'confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'
         );
 
         if ($args['start_date'] != $args['end_date']) {
@@ -1028,7 +1028,7 @@ class ARF_DOWNLOAD_PDF
         /*if($this->status && ((is_array($this->status) && in_array("all", $this->status)) || ($this->status != "all"))){
         }*/
         $attr['post_status'] = array(
-            'confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'
+            'confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'
         );
 
         if ($args['start_date'] != $args['end_date']) {

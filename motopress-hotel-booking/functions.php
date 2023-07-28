@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Get template part.
  *
@@ -1503,8 +1502,10 @@ function mphb_booking_info_manual_func( $atts ){
             $beacharrivaltime = get_post_meta($_GET["booking_id"], 'beach_arrival_time', true); 
             $products_title = get_post_meta($_GET["booking_id"], 'products_title', true); 
             $products_title2 = get_post_meta($_GET["booking_id"], 'products_title2', true); 
-            $price_breakdown = get_post_meta($_GET["booking_id"], '_mphb_booking_price_breakdown', true);
-            $arf_is_gift = get_post_meta($_GET["booking_id"], 'arf_is_gift', true); 
+            $price_breakdown = get_post_meta($_GET["booking_id"], '_mphb_booking_price_breakdown', true); 
+
+            $is_gift=get_post_meta($_GET["booking_id"],'arf_is_gift',true);  
+
             $adults = 0; 
             $child = 0; 
             $guest_name = ""; 
@@ -1627,13 +1628,20 @@ function mphb_booking_info_manual_func( $atts ){
             	/*$return .= '<tr>';
             		$return .= '<td>Sub Total:</td>';
             		$return .= '<td>'.substr(str_replace(MPHB()->settings()->currency()->getCurrencySymbol(), "<br/>".MPHB()->settings()->currency()->getCurrencySymbol(), $sub_total), 5).'</td>';
-            	$return .= '</tr>';*/
-            	if(!$arf_is_gift){
-                	$return .= '<tr>';
-                		$return .= '<td>Total:</td>';
-                		$return .= '<td>'.MPHB()->settings()->currency()->getCurrencySymbol().number_format($total,2).'</td>';
-                	$return .= '</tr>';
-            	}
+            	$return .= '<///tr>';*/
+            	////echo $is_gift;
+            	if($is_gift=="Yes")
+            		{
+
+            		}
+            		else
+            			{
+			            	$return .= '<tr>';
+			            		$return .= '<td>Total: </td>';
+			            		$return .= '<td>'.MPHB()->settings()->currency()->getCurrencySymbol().number_format($total,2).'</td>';
+			            	$return .= '</tr>'; 
+            	 		}
+
             $return .= '</table>';
             
             $return .= '<button id="authorize-button" class="btn btn-primary"><img src="https://booking.arienzobeachclub.com/wp-content/uploads/2021/12/google.png"  /> <span style="    vertical-align: text-top;">Add To Google Calender</span></button>';

@@ -181,7 +181,7 @@ class CPTPersistence {
 	 * @return int
 	 */
 	public function createOrUpdate( \MPHB\Entities\WPPostData $postData ){
-		return $postData->hasID() ? $this->update( $postData ) : $this->create( $postData );
+		return ($postData->hasID() && $postData->getID()) ? $this->update( $postData ) : $this->create( $postData );
 	}
 
 	/**

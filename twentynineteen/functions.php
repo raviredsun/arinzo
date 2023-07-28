@@ -863,7 +863,7 @@ function custom_dashboard_widget() {
                 FROM  $wpdb->postmeta
                 LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id)
                     WHERE `meta_key` = 'mphb_check_in_date'
-                    AND `meta_value` = '$mphb_check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')
+                    AND `meta_value` = '$mphb_check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')
             ");
              
             $mphb_place = array();
@@ -1257,7 +1257,7 @@ function custom_dashboard_widget() {
 			            'posts_per_page' => $pagi,
 			            'paged' => $paged, 
 			            'post_type' => 'mphb_booking',
-			            'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'),
+			            'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'),
 			            'fields' => 'ids',
 			            'meta_query' => array()
 			        );
@@ -1344,7 +1344,6 @@ function custom_dashboard_widget() {
 				                <th>Services</th>
 				                <th>Location</th>
 				                <th>Table</th>
-				                <th>Bottles</th>
 				                <th>Notes</th>
 				                <th width="120">Status</th>
 				            </tr>
@@ -1422,7 +1421,6 @@ function custom_dashboard_widget() {
 						                    }
 						                }
 						                $qr_code_status = get_post_meta($id, 'arf_qr_code_status', true);
-						                $products_title = get_post_meta($id, 'products_title2', true);
 						                
 						                //$price = $booking->getTotalPrice();
 						                $price_breakdown = get_post_meta( $id, '_mphb_booking_price_breakdown', true); 
@@ -1459,8 +1457,9 @@ function custom_dashboard_widget() {
 			                                    <input type="text" data-field="name" data-id="<?php echo $id ?>" class="form-control data_input" value="<?php echo $customer->getName() ?>" style="display: none;">
 						                    </td>
 						                    <td class="edit_td td_data">
-						                    	<span class="data_show"><?php echo $customer->getPhone() ?></span><a href="https://wa.me/<?php echo esc_attr( $customer->getPhone() ) ?>" target="_blank" style="border: none;"><img src="https://booking.arienzobeachclub.com/wp-content/uploads/2022/11/whatsapp-logo-light-green-png-0.png" width="30"  class="no-border"></a>
+						                    	<span class="data_show"><?php echo $customer->getPhone() ?></span>
 			                                    <input type="text" data-field="phone" data-id="<?php echo $id ?>" class="form-control data_input" value="<?php echo $customer->getPhone() ?>" style="display: none;">
+						                    	
 						                    </td>
 						                    <td><?php echo $guest ?></td>
 						                    <td><?php Views\BookingView::renderTotalPriceHTML( $booking ); ?></td>
@@ -1494,7 +1493,6 @@ function custom_dashboard_widget() {
 						                     ?></td>
 						                    <td><?php echo implode(",", $places) ?></td>
 						                    <td><?php echo implode(",", $tables) ?></td>
-						                    <td><?php echo $products_title ?></td>
 						                    <td><?php echo isset($metas['mphb_note'][0]) ? $metas['mphb_note'][0] : "" ?></td>
 						                    <td>
 						                    	<?php if (empty($qr_code_status)) { ?>
@@ -2420,7 +2418,7 @@ function get_booking_details_fun()
 				    SELECT post_id 
 				    FROM  $wpdb->postmeta
 				        LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id)
-				        WHERE `meta_key` = 'mphb_check_in_date' AND ".$wpdb->prefix."posts.post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')
+				        WHERE `meta_key` = 'mphb_check_in_date' AND ".$wpdb->prefix."posts.post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')
 				        AND `meta_value` = '$mphb_check_in_date' AND ".$wpdb->prefix."posts.ID != '".$_GET["booking_id"]."'
 				"); 
 				        /*WHERE `meta_key` = 'mphb_check_in_date' AND ".$wpdb->prefix."posts.post_status != 'cancelled' AND ".$wpdb->prefix."posts.post_status != 'trash' AND ".$wpdb->prefix."posts.post_status != 'expired-reservation' AND ".$wpdb->prefix."posts.post_status != 'special-cancellations'*/
@@ -3006,7 +3004,7 @@ $booking_ids = $wpdb->get_results ("
                 FROM  $wpdb->postmeta
                 LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id)
                     WHERE `meta_key` = 'mphb_check_in_date'
-                    AND `meta_value` = '$mphb_check_in_date' AND post_status IN ('confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')
+                    AND `meta_value` = '$mphb_check_in_date' AND post_status IN ('confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')
             ");
 
 }
@@ -3153,7 +3151,7 @@ function add_post_type_food_beverage(){
 				global $wpdb;
 				$total_array = array();
 				$total = 0;
-				$result = $wpdb->get_results("SELECT ID,{$wpdb->prefix}posts.post_status FROM {$wpdb->prefix}posts LEFT JOIN {$wpdb->prefix}postmeta ON ({$wpdb->prefix}postmeta.post_id = {$wpdb->prefix}posts.ID) WHERE {$wpdb->prefix}posts.post_type='mphb_booking' AND meta_key = 'products' AND  (meta_value LIKE '%".sprintf(':"%s";', $post_id)."%' OR meta_value LIKE '%".sprintf(':%s;', $post_id)."%') AND {$wpdb->prefix}posts.post_status IN ('confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge','cancelled')");
+				$result = $wpdb->get_results("SELECT ID,{$wpdb->prefix}posts.post_status FROM {$wpdb->prefix}posts LEFT JOIN {$wpdb->prefix}postmeta ON ({$wpdb->prefix}postmeta.post_id = {$wpdb->prefix}posts.ID) WHERE {$wpdb->prefix}posts.post_type='mphb_booking' AND meta_key = 'products' AND  (meta_value LIKE '%".sprintf(':"%s";', $post_id)."%' OR meta_value LIKE '%".sprintf(':%s;', $post_id)."%') AND {$wpdb->prefix}posts.post_status IN ('confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','cancelled')");
 				foreach ($result as $key => $value) {
 					$products_qty = get_post_meta($value->ID,"products_qty",true);
 					if($products_qty){
@@ -3190,13 +3188,13 @@ function add_post_type_food_beverage(){
 
 			//$paged = isset($_GET['paged']) ? ($_GET['paged']-1)*20 : 0;
 
-    		/*$result = $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts LEFT JOIN {$wpdb->prefix}postmeta ON ({$wpdb->prefix}postmeta.post_id = {$wpdb->prefix}posts.ID) WHERE {$wpdb->prefix}posts.post_type='mphb_booking' AND meta_key = 'products' AND  meta_value LIKE '%".sprintf(':"%s";', $_GET['product_id'])."%' AND {$wpdb->prefix}posts.post_status IN ('confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge') LIMIT ".$paged.",20 ",ARRAY_A);*/
+    		/*$result = $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts LEFT JOIN {$wpdb->prefix}postmeta ON ({$wpdb->prefix}postmeta.post_id = {$wpdb->prefix}posts.ID) WHERE {$wpdb->prefix}posts.post_type='mphb_booking' AND meta_key = 'products' AND  meta_value LIKE '%".sprintf(':"%s";', $_GET['product_id'])."%' AND {$wpdb->prefix}posts.post_status IN ('confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge') LIMIT ".$paged.",20 ",ARRAY_A);*/
 
     		$paged = isset($_GET['paged']) ? $_GET['paged'] : 1;
 
             //$pagi = get_option("booking_dashboard_pagi");
             $pagi = 20;
-            $post_status = array('confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge');
+            $post_status = array('confirmed','confirmed-archived','paid_not_refundable','paid_refundable','last_minute','pending_late_charge');
 
             if(!empty($_GET['post_status'])){
             	$post_status = $_GET['post_status'];
@@ -4246,11 +4244,7 @@ function mphb_service_avail_result_func(){
 					<?php } ?>
 				<?php }else{ ?>
 					<tr>
-						<td>Oops! We're currently fully booked. <br>
-						However, if you'd like to be added to our waiting list, please send an email to <a href= "mailto:waitinglist@arienzobeachclub.com">waitinglist@arienzobeachclub.com</a>.<br> 
-						We'll do our best to get in touch with you as soon as spots become available. 
-						<br /><br />
-						Thank you for your patience and interest!</td>
+						<td>Services Not Available</td>
 					</tr>
 				<?php } ?>
 			</tbody>
@@ -4293,11 +4287,7 @@ function mphb_service_avail_result_func(){
 		<?php }else{ ?>
 			<table class="table table-bordered table-white">
 				<tr>
-					<td>Oops! We're currently fully booked. <br>
-					However, if you'd like to be added to our waiting list, please send an email to <a href= "mailto:waitinglist@arienzobeachclub.com">waitinglist@arienzobeachclub.com</a>.<br> 
-					We'll do our best to get in touch with you as soon as spots become available. 
-					<br /><br />
-					Thank you for your patience and interest!</td>
+					<td>Services Not Available</td>
 				</tr>
 			</table>
 		<?php } ?>
@@ -5229,6 +5219,8 @@ function footer_script() {
       			ajax_request[service_id] = null;
       			if(json['location']){
       				$this.parents(".wizard_container").find(".custom_error_message").text(json['location']);
+      			}else if(json['error']){
+      				$this.parents(".wizard_container").find(".custom_error_message").text(json['error']);
       			}else{
       				$this.parents(".wizard_container").find(".custom_error_message").text("");
       			}
@@ -5302,12 +5294,6 @@ function footer_script() {
 		        jQuery.browser.version = RegExp.$1;
 		    }
 		})();
-		if(jQuery(".date_viewer").length){
-			jQuery(".date_viewer").click(function(){
-				jQuery(".mphb-datepick").datepicker("show");
-
-			})
-		}
 		if(jQuery("#mphb_check_in_date").length){
 
       var month_names_short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -5976,7 +5962,7 @@ function mphb_service_avail_result2_func($attr){
 
 
       global $wpdb;
-      $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '".$checkInDateFormatted."' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')");
+      $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '".$checkInDateFormatted."' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')");
       $booked_places = array();
       $table_selected_ids = array();
       foreach ($booking_ids as $booking_id) {
@@ -6059,9 +6045,7 @@ function mphb_service_avail_result2_func($attr){
                   $blocked_dates[] = date("Y-m-d",strtotime($vvv));
               }
           }
-
           if(!in_array($checkInDateFormatted, $blocked_dates)){
-
 	       		$location = get_post_meta($value,"location_on_order",1);
 	       		$location_count = 0;
 	       		$total_locations = array();
@@ -6111,28 +6095,7 @@ function mphb_service_avail_result2_func($attr){
 			          $errorslocation = "Booking not available for selected date please select diffrent date";
 			      }
 
-
-          	$features_image_type = get_post_meta($value, 'features_image_type', true);
-          	$service_price = get_post_meta($value, 'service_price', true);
-          	$min_pax = get_post_meta($value, 'min_pax', true);
-           	
-         		$service_price = array_filter($service_price);
-        		if($features_image_type){
-        			foreach ($features_image_type as $kk => $vvv) {
-        				if(empty($service_price[$vvv])){
-        					unset($features_image_type[$kk]);
-        				}else if(!isset($min_pax[$vvv]) || $min_pax[$vvv] > $adult){
-        					unset($features_image_type[$kk]);
-        				}
-        			}
-        		}
-        		if(!$features_image_type){
-        			$errorslocation = "Booking not available for selected date please select diffrent date";		
-        		}
-        	
-          	
-
-            if(!$errorslocation){
+             if(!$errorslocation){
 							$service[] = array(
 								"id" => $value,
 								"title" => get_the_title( $value ),
@@ -6717,11 +6680,7 @@ function mphb_service_avail_result2_func($attr){
 		<?php }else{ ?>
 			<table class="table table-bordered table-white">
 				<tr>
-					<td>Oops! We're currently fully booked. <br>
-					However, if you'd like to be added to our waiting list, please send an email to <a href= "mailto:waitinglist@arienzobeachclub.com">waitinglist@arienzobeachclub.com</a>.<br> 
-					We'll do our best to get in touch with you as soon as spots become available. 
-					<br /><br />
-					Thank you for your patience and interest!</td>
+					<td>Services Not Available</td>
 				</tr>
 			</table>
 		<?php } ?>
@@ -6852,7 +6811,6 @@ function mphb_room_service_detail_full2_func($atts){
                     }
                     $qty_stock = (int)get_post_meta($value,"stock",1);
                     if(!$qty_stock) continue;
-                    if(empty($service_price[$value]) || (int)$service_price[$value] < 1) continue;
 					$url = get_the_post_thumbnail_url($value,'full');
 					if($url){
 						if($default && in_array($value, $default)){
@@ -7099,15 +7057,25 @@ function check_lunch_time_avail_fun(){
       
 
 			global $wpdb;
-      $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '".$_POST['date']."' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')");
+      $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '".$_POST['date']."' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')");
 
-
+      $total_pax = 0;
       $table_selected_ids = array();
       $booked_places = array();
       $total_locations = array();
+
       if($booking_ids){
 	      foreach ($booking_ids as $booking_id) {
-
+	      		$price_breakdown = get_post_meta( $booking_id->post_id, '_mphb_booking_price_breakdown', true); 
+	      		if($price_breakdown){
+      				$ddd = json_decode(strip_tags($price_breakdown),true);
+							if(isset($ddd['rooms'])){
+								foreach ($ddd['rooms'] as $kk => $value) {
+									$total_pax += !empty($value['room']['adults']) ? $value['room']['adults'] : 0; 
+			           	$total_pax += !empty($value['room']['children']) ? $value['room']['children'] : 0; 
+								}
+							}
+	      		}
 	          $item_lunch_time = get_post_meta($booking_id->post_id, 'lunch_time', true);
 	          $lunch_id = "";
 	          if(is_numeric($item_lunch_time)){
@@ -7275,7 +7243,11 @@ function check_lunch_time_avail_fun(){
           $json['location'] = "We regret to inform you that we are unable to accommodate your requested reservation; please consider selecting an alternative date or reducing the number of individuals in order for us to be able to serve you.";
           //$json['location'] = "Booking not available for selected persons and date please decrese person or select diffrent date" . count($total_locations);
       }
-
+      $mphb_daily_limit = get_option("mphb_daily_limit");
+       
+      if(($total_pax + $total_person_count) > $mphb_daily_limit){
+      	$json['error'] = "Booking full for selected date please select diffrent date.";
+      }
 	}
 	echo json_encode($json);wp_die();
 }

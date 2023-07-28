@@ -160,7 +160,7 @@ class ARF_CUSTOM_BOOKING_CREATOR
                     }
                 }
                 global $wpdb;
-                $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')");
+                $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')");
                 $booked_places = array();
                 $table_selected_ids = array();
                 foreach ($booking_ids as $booking_id) {

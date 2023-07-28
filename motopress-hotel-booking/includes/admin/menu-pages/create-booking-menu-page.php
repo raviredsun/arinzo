@@ -46,7 +46,8 @@ class CreateBookingMenuPage extends AbstractMenuPage {
 
 		MPHB()->getPublicScriptManager()->register();
 
-		if ( $this->step == 3 && $this->checkout->isValidStep() ) {
+			 
+		if ( $this->step == 3 || $this->step == 2 && $this->checkout->isValidStep() ) {
 			$booking = $this->checkout->getBooking();
 
             $checkoutData = array(
@@ -85,13 +86,19 @@ class CreateBookingMenuPage extends AbstractMenuPage {
 			return;
 		}
 
+
 		switch ( $this->step ) {
 			case 2:
-				$this->results = new CreateBooking\ResultsStep();
+				/*$this->results = new CreateBooking\ResultsStep();
 				$this->results->setup();
-				$this->results->setNextUrl( $this->getUrl( array( 'step' => 3 ) ) );
+				$this->results->setNextUrl( $this->getUrl( array( 'step' => 3 ) ) );*/
 				// No break - render results and search form
-
+				
+				$this->checkout = new CreateBooking\CheckoutStep();
+				$this->checkout->setup();
+				$this->checkout->setNextUrl( $this->getUrl( array( 'step' => 4 ) ) );
+				break;
+				
 			case 1:
 				$this->search = new CreateBooking\SearchStep();
 				$this->search->setup();
@@ -126,8 +133,9 @@ class CreateBookingMenuPage extends AbstractMenuPage {
 						break;
 
 					case 2:
-						$this->search->render();
-						$this->results->render();
+						$this->checkout->render();
+						//$this->search->render();
+						//$this->results->render();
 						break;
 
 					case 3:

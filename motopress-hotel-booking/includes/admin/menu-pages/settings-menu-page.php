@@ -196,6 +196,14 @@ class SettingsMenuPage extends AbstractMenuPage {
 				'description'	 => __( 'Page user will be redirected to once the booking is confirmed via email or by admin.', 'motopress-hotel-booking' ),
 				'default'		 => ''
 			) ),
+			Fields\FieldFactory::create( 'mphb_daily_limit', array(
+				'type'			 => 'number',
+				'label'			 => __( 'Daily Booking Limit (Pax)', 'motopress-hotel-booking' ),
+				'description'	 => __( 'Daily Booking Limit (Pax).', 'motopress-hotel-booking' ),
+				'min'			 => 0,
+				'step'			 => 1,
+				'default'		 => 1
+			) ),
 			Fields\FieldFactory::create( 'mphb_prereminder', array(
 				'type'			 => 'number',
 				'label'			 => __( 'Prereminder Days', 'motopress-hotel-booking' ),

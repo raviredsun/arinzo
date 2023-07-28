@@ -62,7 +62,7 @@ function arf_map_page_contents()
     $args = array(
         'posts_per_page' => -1,
         'post_type' => 'mphb_booking',
-        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'),
+        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'),
         'fields' => 'ids',
         'meta_query' => array(
             array(

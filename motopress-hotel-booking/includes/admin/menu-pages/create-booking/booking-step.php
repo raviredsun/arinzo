@@ -25,6 +25,8 @@ class BookingStep extends Step {
 	public function setup(){
 		parent::setup();
 
+
+
 		if ( !$this->isValidStep ) {
 			return;
 		}
@@ -33,12 +35,26 @@ class BookingStep extends Step {
         // which require price breakdown in their text. See MB-1027 for more details
 		$this->booking->getPriceBreakdown();
 
+		if (!empty($_POST['paytype'])) {
+			if($_POST['paytype'] == "not_refundable"){
+				$this->booking->setStatus( \MPHB\PostTypes\BookingCPT\Statuses::STATUS_PAID_NOT_REFUNDABLE );
+			}else if($_POST['paytype'] == "refundable"){
+				$this->booking->setStatus( \MPHB\PostTypes\BookingCPT\Statuses::STATUS_PAID_REFUNDABLE );
+			}else if($_POST['paytype'] == "last_minute"){
+				$this->booking->setStatus( \MPHB\PostTypes\BookingCPT\Statuses::STATUS_LAST_MINUTE );
+			}
+		}
+
 		$bookingSaved = MPHB()->getBookingRepository()->save( $this->booking );
 
 		if ( !$bookingSaved ) {
 			$this->parseError( __( 'Unable to create booking. Please try again.', 'motopress-hotel-booking' ) );
 			$this->isValidStep = false;
 			return;
+		}
+
+		if (!empty($_POST['emailtype'])) {
+            update_post_meta($this->booking->getId(), "payment_allow", 1);
 		}
 		
 		if($_POST['mphb_beach_arrival_time']) {
@@ -85,6 +101,142 @@ class BookingStep extends Step {
             update_post_meta($this->booking->getId(), "mphb_place_7", $_POST['mphb_place_7']);
         }
 
+        if (!empty($_POST['mphb_room_details'])) {
+            foreach ( $_POST['mphb_room_details'] as $value ) {
+                if (!empty($value['services'])) {
+                    foreach ( $value['services'] as $reservedService ) {
+                        if(empty($reservedService['id'])) continue;
+                        $service_price = get_post_meta($reservedService['id'], 'service_price', true);
+                        $min_pax = get_post_meta($reservedService['id'], 'min_pax', true);
+                        $max_pax = get_post_meta($reservedService['id'], 'max_pax', true);
+
+                        $featured_img_url = array();
+                        $min = array();
+                        $max = array();
+                        foreach ($max_pax as $key => $value) {
+                            $max[$key] = $value;
+                        }
+                        foreach ($min_pax as $key => $value) {
+                            $min[$key] = $value;
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+        if (!empty($_POST['paytype'])) {
+             update_post_meta($this->booking->getId(), 'paytype', $_POST['paytype']);
+        }
+        if (!empty($_POST['products'])) {
+            $products_qty_old = get_post_meta($this->booking->getId(),"products_qty",1);
+
+            $product_change = array();
+
+
+
+            $products = array();
+            $products_qty = array();
+            $products_title = array();
+            $products_title2 = array();
+            $price_total = 0;
+            foreach ($_POST['products'] as $key => $value) {
+                $price = 0;
+                $qty = 1;
+                if(!empty($service_price[$value])){
+                    $products[] = ($value);
+                    $price = $service_price[$value];
+                    if(isset($_POST['products_qty'][$value])){
+                        $qty = $_POST['products_qty'][$value];
+                        $price = $qty * $price;
+                    }else if(isset($max[$value]) && $max[$value] < $adults_total){
+                        $qty = ceil($adults_total / $max[$value]);
+                        $price = $qty * $price;
+                    }
+                    $products_qty[$value] = $qty;
+                    $price_total += $price;
+                    $price = " - €".$price;
+                    $products_title[] = get_the_title($value)." x ".$qty.$price;
+                    $products_title2[] = get_the_title($value)." x ".$qty;
+                }
+            }
+            update_post_meta($this->booking->getId(), 'products_qty', $products_qty);
+            update_post_meta($this->booking->getId(), 'products_price_total', $price_total);
+            update_post_meta($this->booking->getId(), 'products', $products);
+            update_post_meta($this->booking->getId(), 'products_title', implode(" , ", $products_title));
+            update_post_meta($this->booking->getId(), 'products_title2', implode(" , ", $products_title2));
+
+
+            if($products_qty){
+                foreach ($products_qty as $key => $value) {
+                    if(!isset($products_qty_old[$key])){
+                        $product_change["add"][] = array(
+                            "key" => $key,
+                            "oldqty" => 0,
+                            "qty" => $value,
+                        );
+                    }else if($products_qty_old[$key] != $value){
+                        if($products_qty_old[$key] > $value){
+                            $product_change["add"][] = array(
+                                "key" => $key,
+                                "oldqty" => $products_qty_old[$key],
+                                "qty" => $value,
+                            );  
+                        }else{
+                            $product_change["minus"][] = array(
+                                "key" => $key,
+                                "oldqty" => $products_qty_old[$key],
+                                "qty" => $value,
+                            );  
+                        }
+                        unset($products_qty_old[$key]);
+                    }else{
+                        unset($products_qty_old[$key]);
+                    }
+                }
+            }
+            if(!empty($product_change['add'])){
+                foreach ($product_change['add'] as $key => $value) {
+                    $oldstock = $stock = get_post_meta($value['key'],"stock",1);
+                    $stock = $stock - ($value['qty'] - $value['oldqty']);
+                    update_post_meta($value['key'],"stock",$stock);
+                    if(file_exists(ABSPATH."product_log.txt")){
+                        $text = 'Booking ID '.$this->booking->getId().".Product ".get_the_title($value['key'])." Old Quantity ".$value['oldqty'].", New Quantity ".$value['qty'].". Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
+                        $fp = fopen(ABSPATH."product_log.txt", 'a');
+                        fwrite($fp, $text);
+                    }
+                }
+            }
+            if(!empty($product_change['minus'])){
+                foreach ($product_change['minus'] as $key => $value) {
+                    $oldstock = $stock = get_post_meta($value['key'],"stock",1);
+                    $stock = $stock + ($value['oldqty'] - $value['qty']);
+                    update_post_meta($value['key'],"stock",$stock);
+                    if(file_exists(ABSPATH."product_log.txt")){
+                        $text = 'Booking ID '.$this->booking->getId().".Product ".get_the_title($value['key'])." Old Quantity ".$value['oldqty'].", New Quantity ".$value['qty'].". Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
+                        $fp = fopen(ABSPATH."product_log.txt", 'a');
+                        fwrite($fp, $text);
+                    }
+                }
+            }
+            if(!empty($products_qty_old)){
+                foreach ($products_qty_old as $key => $value) {
+                    $oldstock = $stock = get_post_meta($key,"stock",1);
+                    $stock = $stock + ($value);
+                    update_post_meta($key,"stock",$stock);
+                    if(file_exists(ABSPATH."product_log.txt")){
+                        $text = 'Booking ID '.$this->booking->getId().".Product ".get_the_title($key)." Old Quantity ".$value.", New Quantity 0. Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
+                        $fp = fopen(ABSPATH."product_log.txt", 'a');
+                        fwrite($fp, $text);
+                    }
+                }
+            }
+        }
+
+        $priceBreakdown = $this->booking->getPriceBreakdown($this->booking->getId());
+        // Update booking
+        $saved = MPHB()->getBookingRepository()->save($this->booking);
 		do_action( 'mphb_create_booking_by_user', $this->booking );
 
 		// Redirect to "Edit Booking"

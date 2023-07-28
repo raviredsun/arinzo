@@ -39,8 +39,8 @@ class Emails {
         $emails[] = new Booking\Admin\ConfirmedEmail( array(
             'id' => 'admin_customer_confirmed_booking'
         ), Templaters\EmailTemplater::create( array(
-            'booking'            => true,
-            'user_cancellation'  => true
+            'booking'			 => true,
+            'user_cancellation'	 => true
         ) )
         );
         $emails[] = new Booking\Admin\CancelledEmail( array(
@@ -52,8 +52,8 @@ class Emails {
         $emails[] = new Booking\Admin\ConfirmedByPaymentEmail( array(
             'id' => 'admin_payment_confirmed_booking'
         ), Templaters\EmailTemplater::create( array(
-            'booking'    => true,
-            'payment'    => true
+            'booking'	 => true,
+            'payment'	 => true
         ) )
         );
         $emails[] = new Booking\Customer\CancelledEmail( array(
@@ -65,9 +65,9 @@ class Emails {
         $emails[] = new Booking\Customer\PendingEmail( array(
             'id' => 'customer_pending_booking'
         ), Templaters\EmailTemplater::create( array(
-            'booking'            => true,
+            'booking'			 => true,
             'booking_details'    => true,
-            'user_cancellation'  => true
+            'user_cancellation'	 => true
         ) )
         );
         $emails[] = new Booking\Customer\PaidNotRefundableEmail( array(
@@ -102,29 +102,21 @@ class Emails {
             'user_cancellation'  => true
         ) )
         );
-        $emails[] = new Booking\Customer\paidLateChargeEmail( array(
-            'id' => 'customer_paid_late_charge_booking'
-        ), Templaters\EmailTemplater::create( array(
-            'booking'            => true,
-            'booking_details'    => true,
-            'user_cancellation'  => true
-        ) )
-        );
         $emails[] = new Booking\Customer\ConfirmationEmail( array(
             'id' => 'customer_confirmation_booking',
         ), Templaters\EmailTemplater::create( array(
-            'booking'            => true,
+            'booking'			 => true,
             'booking_details'    => true,
-            'user_confirmation'  => true,
-            'user_cancellation'  => true
+            'user_confirmation'	 => true,
+            'user_cancellation'	 => true
         ) )
         );
         $emails[] = new Booking\Customer\ApprovedEmail( array(
             'id' => 'customer_approved_booking',
         ), Templaters\EmailTemplater::create( array(
-            'booking'            => true,
+            'booking'			 => true,
             'booking_details'    => true,
-            'user_cancellation'  => true,
+            'user_cancellation'	 => true,
             'payment'            => true
         ) )
         );
@@ -180,6 +172,13 @@ class Emails {
                 'booking' => true
             ) )
         );
+
+        $emails[] = new Booking\Customer\pendingPaymentEmail( array(
+            'id' => 'customer_pending_payment_booking'
+            ), Templaters\EmailTemplater::create( array(
+                'booking' => true
+            ) )
+        );
         array_map( array( $this, 'addEmail' ), $emails );
     }
     /**
@@ -227,6 +226,7 @@ class Emails {
      * @param \MPHB\Entities\Booking $booking
      */
     public function sendBookingMails( $booking, $oldStatus ){
+        //echo "<pre>"; print_r($_POST); echo "</pre>";die; 
         switch ( $booking->getStatus() ) {
             case BookingCPT\Statuses::STATUS_PENDING:
                 // Send mails only on confirmation-by-admin mode
@@ -237,23 +237,41 @@ class Emails {
                 break;
             case BookingCPT\Statuses::STATUS_PAID_NOT_REFUNDABLE:
                 // Send mails only on confirmation-by-admin mode
-                if ( MPHB()->settings()->main()->getConfirmationMode() == 'manual' )
-                    $this->getEmail( 'admin_pending_booking' )->trigger( $booking ); {
-                    $this->getEmail( 'customer_paid_not_refundable_booking' )->trigger( $booking );
+                if ( MPHB()->settings()->main()->getConfirmationMode() == 'manual' ){
+                    if(isset($_POST['emailtype']) && $_POST['emailtype'] == "none"){
+                    }else if(isset($_POST['emailtype']) && $_POST['emailtype'] == "payment_link"){
+                        $this->getEmail( 'admin_pending_booking' )->trigger( $booking ); 
+                        $this->getEmail( 'customer_pending_payment_booking' )->trigger( $booking );
+                    }else{
+                        $this->getEmail( 'admin_pending_booking' )->trigger( $booking ); 
+                        $this->getEmail( 'customer_paid_not_refundable_booking' )->trigger( $booking );
+                    }
                 }
                 break;
             case BookingCPT\Statuses::STATUS_PAID_REFUNDABLE:
                 // Send mails only on confirmation-by-admin mode
                 if ( MPHB()->settings()->main()->getConfirmationMode() == 'manual' ) {
-                    $this->getEmail( 'admin_pending_booking' )->trigger( $booking );
-                    $this->getEmail( 'customer_paid_refundable_booking' )->trigger( $booking );
+                    if(isset($_POST['emailtype']) && $_POST['emailtype'] == "none"){
+                    }else if(isset($_POST['emailtype']) && $_POST['emailtype'] == "payment_link"){
+                        $this->getEmail( 'admin_pending_booking' )->trigger( $booking ); 
+                        $this->getEmail( 'customer_pending_payment_booking' )->trigger( $booking );
+                    }else{
+                        $this->getEmail( 'admin_pending_booking' )->trigger( $booking );
+                        $this->getEmail( 'customer_paid_refundable_booking' )->trigger( $booking );
+                    }
                 }
                 break;
             case BookingCPT\Statuses::STATUS_LAST_MINUTE:
                 // Send mails only on confirmation-by-admin mode
                 if ( MPHB()->settings()->main()->getConfirmationMode() == 'manual' ) {
-                    $this->getEmail( 'admin_pending_booking' )->trigger( $booking );
-                    $this->getEmail( 'customer_last_minute_booking' )->trigger( $booking );
+                    if(isset($_POST['emailtype']) && $_POST['emailtype'] == "none"){
+                    }else if(isset($_POST['emailtype']) && $_POST['emailtype'] == "payment_link"){
+                        $this->getEmail( 'admin_pending_booking' )->trigger( $booking ); 
+                        $this->getEmail( 'customer_pending_payment_booking' )->trigger( $booking );
+                    }else{
+                        $this->getEmail( 'admin_pending_booking' )->trigger( $booking );
+                        $this->getEmail( 'customer_last_minute_booking' )->trigger( $booking );
+                    }
                 }
                 break;
             case BookingCPT\Statuses::STATUS_PENDING_LATE_CHARGE:
@@ -261,13 +279,6 @@ class Emails {
                 if ( MPHB()->settings()->main()->getConfirmationMode() == 'manual' ) {
                     $this->getEmail( 'admin_pending_booking' )->trigger( $booking );
                     $this->getEmail( 'customer_pending_late_charge_booking' )->trigger( $booking );
-                }
-                break;
-            case BookingCPT\Statuses::STATUS_PAID_LATE_CHARGE:
-                // Send mails only on confirmation-by-admin mode
-                if ( MPHB()->settings()->main()->getConfirmationMode() == 'manual' ) {
-                    $this->getEmail( 'admin_pending_booking' )->trigger( $booking );
-                    $this->getEmail( 'customer_paid_late_charge_booking' )->trigger( $booking );
                 }
                 break;
             case BookingCPT\Statuses::STATUS_PENDING_USER:

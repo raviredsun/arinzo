@@ -96,8 +96,7 @@ abstract class AbstractEmail {
             $receiver = MPHB()->settings()->emails()->getHotelAdminEmail();
         }
         $headers[] = 'Bcc: info@qadisha.it';
-        $headers[] = 'Bcc: reservation@arienzobeachclub.com';
-
+        
 
         return MPHB()->emails()->getMailer()->send($receiver, $this->getSubject(), $this->getMessage(),$headers);
     }

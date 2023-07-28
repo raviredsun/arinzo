@@ -46,7 +46,7 @@ function arf_services_page_contents()
     $args = array(
         'posts_per_page' => -1,
         'post_type' => 'mphb_booking',
-        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','pending_late_charge','paid_late_charge','last_minute'),
+        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','pending_late_charge'),
         'fields' => 'ids',
         'meta_query' => array(
             'relation' => 'AND',
@@ -70,9 +70,7 @@ function arf_services_page_contents()
 
         foreach ($reservedRooms as $reservedRoom) {
             $reservedServices = $reservedRoom->getReservedServices();
-            /*if(isset($_GET['a'])){
-                echo "<pre>"; print_r($reservedServices); echo "</pre>";die; 
-            }*/
+
             foreach ($reservedServices as $reservedService) {
                 $adultsTotal = 0;
                 $childrenTotal = 0;
@@ -84,8 +82,6 @@ function arf_services_page_contents()
                 $adultsTotal += $reservedRoom->getAdults();
                 $childrenTotal += $reservedRoom->getChildren();
                 if (!empty($service_info[$reservedService->getId()]['pax'])) {
-                    
-                        
                     $service_info[$reservedService->getId()]['pax'] += $adultsTotal + $childrenTotal;
                 } else {
                     $service_info[$reservedService->getId()]['pax'] = $adultsTotal + $childrenTotal;

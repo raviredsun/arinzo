@@ -142,8 +142,8 @@ class BookingCPT extends EditableCPT {
 		);
 
 		$customerGroup->addFields( $customerGroupFields );
-		
-		
+
+
 		$giftGroup = new Groups\MetaBoxGroup( 'mphb_is_gift', __( 'Is Gift?', 'motopress-hotel-booking' ), $this->postType );
 
 		$giftGroupFields = array(

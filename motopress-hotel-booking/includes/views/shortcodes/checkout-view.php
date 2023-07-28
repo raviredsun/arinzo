@@ -224,7 +224,7 @@ class CheckoutView {
                     ?>
                     <abbr title="<?php _e('Required', 'motopress-hotel-booking'); ?>">*</abbr>
                 </label>
-                <select name="<?php echo esc_attr($namePrefix); ?>[adults]" id="<?php echo esc_attr($idPrefix); ?>-adults" class="mphb_sc_checkout-guests-chooser adult_field mphb_checkout-guests-chooser" required="required" data-max-allowed="<?php echo esc_attr($adultsCapacity); ?>" data-max-total="<?php echo esc_attr($totalCapacity); ?>" onchange="jQuery('.mphb_checkout-service:checked').parents('li').find('.mphb_checkout-service-adults').val(jQuery(this).val());">
+                <select name="<?php echo esc_attr($namePrefix); ?>[adults]" id="<?php echo esc_attr($idPrefix); ?>-adults" class="mphb_sc_checkout-guests-chooser adult_field mphb_checkout-guests-chooser" required="required" data-max-allowed="<?php echo esc_attr($adultsCapacity); ?>" data-max-total="<?php echo esc_attr($totalCapacity); ?>" onchange="if(jQuery('.mphb_checkout-service:checked').length > 0){ jQuery('.mphb_checkout-service:checked').parents('li').find('.mphb_checkout-service-adults').val(jQuery(this).val()); }else{ jQuery('.mphb_checkout-service-adults').val(jQuery(this).val()) }">
                     <option value=""><?php _e('— Select —', 'motopress-hotel-booking'); ?></option>
                     <?php for ($i = 1; $i <= $maxAdults; $i++) { ?>
                         <option value="<?php echo $i; ?>" <?php selected($i, $presetAdults); ?>>
@@ -242,7 +242,7 @@ class CheckoutView {
                     <?php printf(__('Children %s', 'motopress-hotel-booking'), MPHB()->settings()->main()->getChildrenAgeText()); ?>
                     <abbr title="<?php _e('Required', 'motopress-hotel-booking'); ?>">*</abbr>
                 </label>
-                <select name="<?php echo esc_attr($namePrefix); ?>[children]" id="<?php echo esc_attr($idPrefix); ?>-children" class="mphb_sc_checkout-guests-chooser child_field mphb_checkout-guests-chooser" required="required" data-max-allowed="<?php echo esc_attr($childrenCapacity); ?>" data-max-total="<?php echo esc_attr($totalCapacity); ?>" onchange="jQuery('.mphb_checkout-service:checked').parents('li').find('.mphb_checkout-service-child').val(jQuery(this).val());">
+                <select name="<?php echo esc_attr($namePrefix); ?>[children]" id="<?php echo esc_attr($idPrefix); ?>-children" class="mphb_sc_checkout-guests-chooser child_field mphb_checkout-guests-chooser" required="required" data-max-allowed="<?php echo esc_attr($childrenCapacity); ?>" data-max-total="<?php echo esc_attr($totalCapacity); ?>" onchange="if(jQuery('.mphb_checkout-service:checked').length > 0){ jQuery('.mphb_checkout-service:checked').parents('li').find('.mphb_checkout-service-child').val(jQuery(this).val()); }else{ jQuery('.mphb_checkout-service-child').val(jQuery(this).val()); }">
                     <option value=""><?php _e('— Select —', 'motopress-hotel-booking'); ?></option>
                     <?php for ($i = 0; $i <= $maxChildren; $i++) { ?>
                         <option value="<?php echo $i; ?>" <?php selected($i, $presetChildren); ?>>
@@ -254,7 +254,7 @@ class CheckoutView {
         <?php } else { ?>
             <input type="hidden" id="<?php echo esc_attr($idPrefix); ?>-children" name="<?php echo esc_attr($namePrefix); ?>[children]" value="<?php echo esc_attr($minChildren); ?>">
         <?php } ?>
-        <p class="mphb-guest-name-wrapper">
+        <p class="mphb-guest-name-wrapper" style="display:none;">
             <label for="<?php echo esc_attr($idPrefix); ?>-guest-name">
                 <?php _e('Full Guest Name', 'motopress-hotel-booking'); ?>
             </label>
@@ -399,7 +399,7 @@ class CheckoutView {
                 SELECT post_id,meta_value
                 FROM  $wpdb->postmeta
                     LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id)
-                    WHERE `meta_key` = 'mphb_check_in_date' AND ".$wpdb->prefix."posts.post_status  IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')
+                    WHERE `meta_key` = 'mphb_check_in_date' AND ".$wpdb->prefix."posts.post_status  IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')
                     AND date(meta_value) > '".date("Y-m-d")."' AND ".$wpdb->prefix."posts.ID != '".$_GET["booking_id"]."'
             ");     
             if($booking_ids){
@@ -453,7 +453,7 @@ class CheckoutView {
             SELECT post_id 
             FROM  $wpdb->postmeta
                 LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id)
-                WHERE `meta_key` = 'mphb_check_in_date' AND ".$wpdb->prefix."posts.post_status  IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')
+                WHERE `meta_key` = 'mphb_check_in_date' AND ".$wpdb->prefix."posts.post_status  IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')
                 AND `meta_value` = '$mphb_check_in_date' AND ".$wpdb->prefix."posts.ID != '".$_GET["booking_id"]."'
         "); 
         $booking_slot = array();
@@ -772,7 +772,7 @@ class CheckoutView {
 					<?php echo $requiredAbbr; ?>
 				</label>
 				<br />
-				<input type="text" id="mphb_first_name" name="mphb_first_name" <?php echo $requiredAttr; ?> />
+				<input type="text" onchange="jQuery('.mphb-guest-name-wrapper input').val(jQuery('#mphb_first_name').val()+' '+jQuery('#mphb_last_name').val())" id="mphb_first_name" name="mphb_first_name" <?php echo $requiredAttr; ?> />
 			</p>
 			<p class="mphb-customer-last-name">
 				<label for="mphb_last_name">
@@ -780,7 +780,7 @@ class CheckoutView {
 					<?php echo $requiredAbbr; ?>
 				</label>
 				<br />
-				<input type="text" name="mphb_last_name" id="mphb_last_name" <?php echo $requiredAttr; ?> />
+				<input type="text" onchange="jQuery('.mphb-guest-name-wrapper input').val(jQuery('#mphb_first_name').val()+' '+jQuery('#mphb_last_name').val())" name="mphb_last_name" id="mphb_last_name" <?php echo $requiredAttr; ?> />
 			</p>
 			<p class="mphb-customer-email">
 				<label for="mphb_email">
@@ -1089,15 +1089,35 @@ class CheckoutView {
 	public static function _renderCouponButtonParagraphClose(){
 		echo '</p>';
 	}
+    public static function renderPaymentType($reservedRoom, $roomIndex, $roomType, $booking){
+
+        if (!$roomType->hasServices()) {
+            return;
+        }
+        $booking_id = isset($_GET["booking_id"]) ? $_GET["booking_id"] : 0;
+        if($booking_id)
+            return;
+
+        ?>
+        <h3>Payment Type</h3>
+        <input type="radio" name="paytype" class="paytype" value="not_refundable" checked ><?php _e('Paid Not Refundable', 'arienzo_reservation_form'); ?> &nbsp;&nbsp;&nbsp;&nbsp;
+        <input type="radio" name="paytype" class="paytype" value="refundable" ><?php _e('Paid Refundable', 'arienzo_reservation_form'); ?> &nbsp;&nbsp;&nbsp;&nbsp;
+        <input type="radio" name="paytype" class="paytype" value="last_minute" ><?php _e('Last Minute', 'arienzo_reservation_form'); ?> <br/>
+        <h3>Email Type</h3>
+        <input type="radio" name="emailtype" class="emailtype" value="none" checked ><?php _e('None', 'arienzo_reservation_form'); ?> &nbsp;&nbsp;&nbsp;&nbsp;
+        <input type="radio" name="emailtype" class="emailtype" value="default" ><?php _e('Default', 'arienzo_reservation_form'); ?> &nbsp;&nbsp;&nbsp;&nbsp;
+        <input type="radio" name="emailtype" class="emailtype" value="payment_link" ><?php _e('Paymant Link', 'arienzo_reservation_form'); ?> <br/>
+        <?php
+    }
     public static function renderProductChooser($reservedRoom, $roomIndex, $roomType, $booking)
     {
         if (!$roomType->hasServices()) {
             return;
         }
         $services = $reservedRoom->getReservedServices();
-        if (empty($services)) {
+        /*if (empty($services)) {
             return; // MB-858 - don't show "Choose Additional Services" when there are no available services
-        }
+        }*/
         
          
         $adultsTotal = $reservedRoom->getAdults();
@@ -1120,6 +1140,7 @@ class CheckoutView {
             <h4 class="mphb-product-details-title">
                 <?php _e('Choose Products', 'motopress-hotel-booking'); ?>
             </h4>
+            <?php if($services){ ?>
             <?php foreach ($services as $index => $service) {
                 $features_image_type = get_post_meta($service->getId(), 'features_image_type', true);
                 $service_price = get_post_meta($service->getId(), 'service_price', true);
@@ -1191,6 +1212,11 @@ class CheckoutView {
                     </table>
                 <?php } ?>
             </div>
+            <?php } ?>
+            <?php }else{ ?>
+                <div class="product_container">
+                    <p>Product not found in selected service</p>
+                </div>
             <?php } ?>
         </section>
         <script type="text/javascript">

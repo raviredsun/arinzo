@@ -1,5 +1,4 @@
 <?php
-
 /*
 
 Copyright 2007 Jeroen van der Meer <http://jero.net/>

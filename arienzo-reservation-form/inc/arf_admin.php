@@ -21,6 +21,15 @@ function arf_mphb_booking_custom_meta()
         'side',
         'low'
     );
+ 
+    add_meta_box(
+        'arf_is_gift',
+        'Is Gift?',
+        'arf_is_gift',
+        'mphb_booking',
+        'side',
+        'low'
+    );
 
     add_meta_box(
         'arf_service_icon',
@@ -107,6 +116,22 @@ function arf_qr_tracking()
 }
 
 add_action('add_meta_boxes', 'arf_mphb_booking_custom_meta');
+
+function arf_is_gift()
+    {
+        global $post, $wpdb;  
+        $is_gift=get_post_meta($post->ID,'arf_is_gift',true);  
+        wp_nonce_field(basename(__FILE__), 'arf_is_gift');
+        $is_gift = get_post_meta($post->ID, 'arf_is_gift', true);
+
+?>  
+        <label for="is_gift"><input type="checkbox" id="arf_is_gift" name="arf_is_gift" value="Yes" 
+            <?php if($is_gift=="Yes"){echo "checked";} ?>> Yes</label> 
+         
+<?php              
+    }
+
+
 
 function arf_additional_info()
 {
@@ -222,7 +247,7 @@ function wp_ajax_arf_get_tables()
         LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) 
         WHERE `meta_key` = 'mphb_check_in_date'
         AND `meta_value` = '".date("Y-m-d",strtotime($mphb_check_in_date))."'
-        AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')
+        AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')
     ");
     /* echo "<pre>"; print_r("
         SELECT post_id 
@@ -230,7 +255,7 @@ function wp_ajax_arf_get_tables()
         FROM  $wpdb->postmeta
         WHERE `meta_key` = 'mphb_check_in_date'
         AND `meta_value` = '".date("Y-m-d",strtotime($mphb_check_in_date))."'
-        AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')
+        AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')
     "); echo "</pre>";die; */
     foreach ( $booking_ids as $booking_id )
     {
@@ -302,6 +327,10 @@ function arf_save_meta_fields($post_id)
         update_post_meta($post_id, 'arf_qr_code_status', esc_attr($_POST['arf_qr_code_status']));
     if (isset($_POST['arf_service_icon']))
         update_post_meta($post_id, 'arf_service_icon', esc_attr($_POST['arf_service_icon']));
+
+    if(isset($_POST['arf_is_gift']))
+        update_post_meta($post_id,'arf_is_gift',esc_attr($_POST['arf_is_gift']));
+
 }
 
 add_action('save_post', 'arf_save_meta_fields');
@@ -693,7 +722,7 @@ function arf_dashboard_info_by_time()
     $args = array(
         'posts_per_page' => -1,
         'post_type' => 'mphb_booking',
-        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'),
+        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'),
         'fields' => 'ids',
         'meta_query' => array(
             array(
@@ -742,7 +771,7 @@ function arf_dashboard_info_by_day() {
     $args = array(
         'posts_per_page' => -1,
         'post_type' => 'mphb_booking',
-        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'),
+        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'),
         'fields' => 'ids',
         'meta_query' => array(
             'relation' => 'AND',

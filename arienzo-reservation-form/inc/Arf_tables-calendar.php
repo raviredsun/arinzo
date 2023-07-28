@@ -617,7 +617,7 @@ class TablesCalendar
         $args = array(
             'post_type' => 'mphb_booking',
             'posts_per_page' => -1,
-            'post_status' => array('pending', 'confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge', 'pending-payment'),
+            'post_status' => array('pending', 'confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge', 'pending-payment'),
             'orderby' => 'post_title',
             'order' => 'ASC',
             'meta_query' => array(

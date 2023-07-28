@@ -25,7 +25,6 @@ class Statuses extends AbstractCPT\Statuses {
 	const STATUS_PAID_REFUNDABLE	 = 'paid_refundable';
 	const STATUS_LAST_MINUTE	 = 'last_minute';
 	const STATUS_PENDING_LATE_CHARGE	 = 'pending_late_charge';
-	const STATUS_PAID_LATE_CHARGE	 = 'paid_late_charge';
 
 	public function __construct( $postType ){
 		parent::__construct( $postType );
@@ -98,9 +97,6 @@ class Statuses extends AbstractCPT\Statuses {
 			'lock_room' => false
 		);
 	    $this->statuses[self::STATUS_PENDING_LATE_CHARGE] = array(
-			'lock_room' => false
-		);
-	    $this->statuses[self::STATUS_PAID_LATE_CHARGE] = array(
 			'lock_room' => false
 		);		
 	}
@@ -298,16 +294,6 @@ class Statuses extends AbstractCPT\Statuses {
 					'show_in_admin_status_list'	 => true,
 					'label_count'				 => _n_noop( 'Pending Late Charge <span class="count">(%s)</span>', 'Pending Late Charge <span class="count">(%s)</span>', 'motopress-hotel-booking' )
 				);
-				break;					
-			case self::STATUS_PAID_LATE_CHARGE:
-				$args	 = array(
-					'label'						 => _x( 'Paid Late Charge', 'Booking status', 'motopress-hotel-booking' ),
-					'public'					 => true,
-					'exclude_from_search'		 => true,
-					'show_in_admin_all_list'	 => false,
-					'show_in_admin_status_list'	 => true,
-					'label_count'				 => _n_noop( 'Paid Late Charge <span class="count">(%s)</span>', 'Paid Late Charge <span class="count">(%s)</span>', 'motopress-hotel-booking' )
-				);
 				break;				
 		}
 		return $args;
@@ -346,7 +332,6 @@ class Statuses extends AbstractCPT\Statuses {
 			"paid_refundable",
 			"last_minute",
 			"pending_late_charge",
-			"paid_late_charge",
 		);
 		$remove_array = array(
 			"pending-user",
@@ -371,17 +356,15 @@ class Statuses extends AbstractCPT\Statuses {
 			if($products_qty){
 				foreach ($products_qty as $key => $value) {
 					$oldstock = $stock = get_post_meta($key,"stock",1);
-					if($stock != ""){
-						$stock = $stock - $value;
-						update_post_meta($key,"stock",$stock);
-						$oldStatusname = mphb_get_status_label($oldStatus);
-						$newStatusname = mphb_get_status_label($newStatus);
+					$stock = $stock - $value;
+					update_post_meta($key,"stock",$stock);
+					$oldStatusname = mphb_get_status_label($oldStatus);
+					$newStatusname = mphb_get_status_label($newStatus);
 
-						if(file_exists(ABSPATH."product_log.txt")){
-							$text = 'Booking ID '.$post->ID." Moved From ".$oldStatusname." To ".$newStatusname.".Product ".get_the_title($key)." Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
-							$fp = fopen(ABSPATH."product_log.txt", 'a');
-							fwrite($fp, $text);
-						}
+					if(file_exists(ABSPATH."product_log.txt")){
+						$text = 'Booking ID '.$post->ID." Moved From ".$oldStatusname." To ".$newStatusname.".Product ".get_the_title($key)." Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
+						$fp = fopen(ABSPATH."product_log.txt", 'a');
+						fwrite($fp, $text);
 					}
 				}
 			}
@@ -390,18 +373,16 @@ class Statuses extends AbstractCPT\Statuses {
 			if($products_qty){
 				foreach ($products_qty as $key => $value) {
 					$oldstock = $stock = get_post_meta($key,"stock",1);
-					if($stock != ""){
-						$stock = $stock + $value;
-						update_post_meta($key,"stock",$stock);
+					$stock = $stock + $value;
+					update_post_meta($key,"stock",$stock);
 
-						$oldStatusname = mphb_get_status_label($oldStatus);
-						$newStatusname = mphb_get_status_label($newStatus);
+					$oldStatusname = mphb_get_status_label($oldStatus);
+					$newStatusname = mphb_get_status_label($newStatus);
 
-						if(file_exists(ABSPATH."product_log.txt")){
-							$text = 'Booking ID '.$post->ID." Moved From ".$oldStatusname." To ".$newStatusname.".Product ".get_the_title($key)." Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
-							$fp = fopen(ABSPATH."product_log.txt", 'a');
-							fwrite($fp, $text);
-						}
+					if(file_exists(ABSPATH."product_log.txt")){
+						$text = 'Booking ID '.$post->ID." Moved From ".$oldStatusname." To ".$newStatusname.".Product ".get_the_title($key)." Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
+						$fp = fopen(ABSPATH."product_log.txt", 'a');
+						fwrite($fp, $text);
 					}
 				}
 			}
@@ -410,18 +391,16 @@ class Statuses extends AbstractCPT\Statuses {
 			if($products_qty){
 				foreach ($products_qty as $key => $value) {
 					$oldstock = $stock = get_post_meta($key,"stock",1);
-					if($stock != ""){
-						//$stock = $stock + $value;
-						//update_post_meta($key,"stock",$stock);
+					//$stock = $stock + $value;
+					//update_post_meta($key,"stock",$stock);
 
-						$oldStatusname = mphb_get_status_label($oldStatus);
-						$newStatusname = mphb_get_status_label($newStatus);
+					$oldStatusname = mphb_get_status_label($oldStatus);
+					$newStatusname = mphb_get_status_label($newStatus);
 
-						if(file_exists(ABSPATH."product_log.txt")){
-							$text = 'Booking ID '.$post->ID." Moved From ".$oldStatusname." To ".$newStatusname.".Product ".get_the_title($key)." Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
-							$fp = fopen(ABSPATH."product_log.txt", 'a');
-							fwrite($fp, $text);
-						}
+					if(file_exists(ABSPATH."product_log.txt")){
+						$text = 'Booking ID '.$post->ID." Moved From ".$oldStatusname." To ".$newStatusname.".Product ".get_the_title($key)." Old Stock ".$oldstock.", New Stock ".$stock.PHP_EOL;
+						$fp = fopen(ABSPATH."product_log.txt", 'a');
+						fwrite($fp, $text);
 					}
 				}
 			}

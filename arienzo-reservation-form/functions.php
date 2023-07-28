@@ -377,10 +377,22 @@ function arf_booking_ajax_request() {
         if($child){
             $total_person_count += $child;
         }
-        $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '".$check_in_date."' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')");
+        $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '".$check_in_date."' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')");
         $booked_places = array();
+        $total_pax = 0;
         $table_selected_ids = array();
         foreach ($booking_ids as $booking_id) {
+
+            $price_breakdown = get_post_meta( $booking_id->post_id, '_mphb_booking_price_breakdown', true); 
+            if($price_breakdown){
+                $ddd = json_decode(strip_tags($price_breakdown),true);
+                if(isset($ddd['rooms'])){
+                    foreach ($ddd['rooms'] as $kk => $value) {
+                        $total_pax += !empty($value['room']['adults']) ? $value['room']['adults'] : 0; 
+                        $total_pax += !empty($value['room']['children']) ? $value['room']['children'] : 0; 
+                    }
+                }
+            }
 
             $item_lunch_time = get_post_meta($booking_id->post_id, 'lunch_time', true);
             if($item_lunch_time == $lunch_time || $item_lunch_time == $lunch_time_text) {
@@ -530,6 +542,12 @@ function arf_booking_ajax_request() {
         if(count($total_tables) < $loop_location){
             $errors['tables'] = "Booking not available for lunch time please select diffrent lunch time";
         }
+
+        $mphb_daily_limit = get_option("mphb_daily_limit");
+       
+        if(($total_pax + $total_person_count) > $mphb_daily_limit){
+            $errors['tables'] = "Booking full for selected date please select diffrent date.";
+        }
     }
 
     $rate_id = arf_get_rate_type_id();
@@ -653,7 +671,10 @@ function add_payment_update() {
         $booking = mphb_get_booking($id, true);
         if($booking){
             $c_status  = get_post_status ( $id );
-            if ($c_status  == 'pending_late_charge') {
+            
+            $payment_allow = get_post_meta($id,"payment_allow",true);
+
+            if ($c_status  == 'pending_late_charge' || $payment_allow) {
                 $ALIAS = 'payment_3567478';
                 $CHIAVESEGRETA = '0XWZ341B4B3wE636KO5FxH1Q3vY31T8VYqJ8335X';
                 $requestUrl = "https://ecommerce.nexi.it/ecomm/ecomm/DispatcherServlet";
@@ -700,7 +721,8 @@ function add_payment_update() {
         $booking = mphb_get_booking($id, true);
         if($booking){
             $c_status  = get_post_status ( $id );
-            if ($c_status  == 'not-paid' || $c_status  == 'pending_late_charge') {
+            $payment_allow = get_post_meta($id,"payment_allow",true);
+            if ($c_status  == 'not-paid' || $c_status  == 'pending_late_charge' || $payment_allow) {
                 $fail = "";
                 $CHIAVESEGRETA = "0XWZ341B4B3wE636KO5FxH1Q3vY31T8VYqJ8335X"; // Sostituire con il valore fornito da Nexi
                  
@@ -801,7 +823,7 @@ function add_payment_update() {
                     $total_person_count = ($children_total ? $children_total : 0) + ($adults_total ? $adults_total : 0);
                     if($services && $total_person_count && $check_in_date){
 
-                        $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')");
+                        $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')");
                         $booked_places = array();
                         $table_selected_ids = array();
                         foreach ($booking_ids as $booking_id) {
@@ -1072,7 +1094,7 @@ function add_payment_update() {
         $attr = array(
             'posts_per_page' => -1,
             'post_type' => 'mphb_booking',
-            'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'),
+            'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'),
             'fields' => 'ids',
             'order' => 'asc',
             'orderby' => 'meta_value',
@@ -1103,7 +1125,7 @@ function add_payment_update() {
             if(!isset($selected_lunch[$check_in_date])){
                 $selected_lunch[$check_in_date] = array();
             }
-            $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')");
+            $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')");
 
             $booked_places = array();
             $table_selected_ids = $selected_lunch[$check_in_date];
@@ -1221,7 +1243,7 @@ function add_payment_update() {
             if(!isset($selected_lunch[$check_in_date])){
                 $selected_lunch[$check_in_date] = array();
             }
-            $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')");
+            $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')");
 
             $booked_places = array();
             $table_selected_ids = $selected_lunch[$check_in_date];
@@ -1339,7 +1361,7 @@ function add_payment_update() {
             if(!isset($selected_lunch[$check_in_date])){
                 $selected_lunch[$check_in_date] = array();
             }
-            $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge')");
+            $booking_ids = $wpdb->get_results("SELECT post_id FROM  $wpdb->postmeta LEFT JOIN ".$wpdb->prefix."posts ON (".$wpdb->prefix."posts.ID = ".$wpdb->postmeta.".post_id) WHERE `meta_key` = 'mphb_check_in_date' AND `meta_value` = '$check_in_date' AND post_status IN ('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge')");
 
             $booked_places = array();
             $table_selected_ids = $selected_lunch[$check_in_date];

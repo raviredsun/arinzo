@@ -1549,10 +1549,6 @@ function arf_shortcode_search2($atts)
 
                             
                             $features_image_type = array();
-                            $defaults_sort_order = array();
-                            $na_defaults = array();
-                            $na_defaults_sort_order = array();
-                            $defaults = array();
 
                             if($features_products){
                                 foreach ($features_products as $key => $value) {
@@ -1564,7 +1560,6 @@ function arf_shortcode_search2($atts)
                                         }
                                         $qty_stock = (int)get_post_meta($value,"stock",1);
                                         if(!$qty_stock) continue;
-                                        if(empty($service_price[$value]) || (int)$service_price[$value] < 1) continue;
                                         $url = get_the_post_thumbnail_url($value,'full');
                                         if($url){
                                             if($default && in_array($value, $default)){
@@ -1580,18 +1575,15 @@ function arf_shortcode_search2($atts)
                             }
 
 
+                            array_multisort($defaults_sort_order, SORT_DESC, $defaults);    
+
 			/* Qadisha - QD - 20230520 - HotFix for errors on page construction */
 			if (empty($na_defaults)) {
 				error_log('This is an empty array!');
 			} else {
-			}
-                            if($defaults){
-	                            array_multisort($defaults_sort_order, SORT_DESC, $defaults);    
-                            }
-                            if($na_defaults){
-                                array_multisort($na_defaults_sort_order, SORT_DESC, $na_defaults);
-                            }
+                            array_multisort($na_defaults_sort_order, SORT_DESC, $na_defaults);  
                             $features_image_type = array_merge($features_image_type,$defaults,$na_defaults);
+			}
                                 
                                 
                             $adult = !empty($_GET['adult']) ? (int)$_GET['adult'] : 1;
@@ -2619,7 +2611,7 @@ function arf_shortcode_location_map() {
     $args = array(
         'posts_per_page' => -1,
         'post_type' => 'mphb_booking',
-        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'),
+        'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'),
         'fields' => 'ids',
         'meta_query' => array(
             array(

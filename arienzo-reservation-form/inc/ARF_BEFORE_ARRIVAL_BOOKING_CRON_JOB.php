@@ -27,7 +27,7 @@ class ARF_BEFORE_ARRIVAL_BOOKING_CRON_JOB {
         $atts = array(
             'posts_per_page'   => -1,
             'post_type'        => 'mphb_booking',
-            'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge','paid_late_charge'),
+            'post_status' => array('confirmed','paid_not_refundable','paid_refundable','last_minute','pending_late_charge'),
             'meta_key'         => 'mphb_check_in_date',
             'meta_value'       => $date,
             'fields'           => 'ids',
